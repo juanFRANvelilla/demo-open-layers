@@ -11,7 +11,7 @@ import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
 import { fromLonLat } from 'ol/proj';
 import { Geometry } from 'ol/geom';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import { UsaStatesService } from '../usa-states.service';
 
 @Component({
@@ -22,9 +22,11 @@ import { UsaStatesService } from '../usa-states.service';
   styleUrl: './usa-map.component.scss'
 })
 export class UsaMapComponent {
+  private subscription?: Subscription;
   private vectorSource!: VectorSource;
   private map!: Map;
   tooltipElement!: HTMLElement;
+  private selectedFeature: any;
 
   constructor(private usaStatesService: UsaStatesService) {}  
 
@@ -34,6 +36,12 @@ export class UsaMapComponent {
 
     this.usaStatesService.getStates().subscribe((geojsonData: any) => {
       this.loadGeoJsonData(geojsonData);
+    });
+
+    this.subscription = this.usaStatesService.selectedFeature.subscribe(feature => {
+      console.log('cambio en el estado seleccionado desde map:', feature);
+      this.selectedFeature = feature;
+      this.vectorSource.changed();
     });
   }
 
@@ -46,8 +54,8 @@ export class UsaMapComponent {
         })
       ],
       view: new View({
-        center: [-78.66635781106866, 37.51086709291787], 
-        zoom: 6,
+        center: [27.090528, -95.265041], 
+        zoom: 10,
         projection: 'EPSG:3857'
       })
     });
@@ -65,9 +73,9 @@ export class UsaMapComponent {
       const properties = feature.getProperties();
       const stateName = properties['ste_name'][0]; 
       
-      this.showTooltip(event.coordinate, stateName);
+      // this.showTooltip(event.coordinate, stateName);
     } else {
-      this.hideTooltip();
+      // this.hideTooltip();
     }
   }
 
@@ -86,11 +94,11 @@ export class UsaMapComponent {
 
   private handleMapClick(event: any) {
     const pixel = this.map.getEventPixel(event.originalEvent);
-    const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;;
+    const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;
 
     if (feature) {
-      this.usaStatesService.selectedFeature.set(feature);
-      this.vectorSource.changed();
+      const properties = feature.getProperties();
+      this.usaStatesService.updateSelectedFeature(properties);
 
     // const properties = feature.getProperties();
     // const stateName = properties['ste_name'][0];
@@ -122,7 +130,8 @@ export class UsaMapComponent {
   }
 
   private getStyle(feature: any) {
-    if (feature.getProperties()['ste_name'][0] === this.usaStatesService.selectedFeature()?.getProperties()['ste_name'][0]) {
+    // if (feature.getProperties()['ste_name'][0] === this.selectedFeature?.getProperties()['ste_name'][0]) {
+      if (feature.getProperties()['ste_name'][0] === this.selectedFeature?.ste_name[0]) {
       console.log('estilo seleccionado');
       return new Style({
         stroke: new Stroke({
@@ -144,6 +153,12 @@ export class UsaMapComponent {
         color: 'rgba(0, 0, 255, 0.1)'
       })
     });
+  }
+
+
+  onSelectedFeatureChange(newFeature: any): void {
+    console.log('Selected feature changed:', newFeature);
+    // Aquí puedes realizar cualquier acción necesaria
   }
 
 }
