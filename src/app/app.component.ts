@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { UsaMapComponent } from './components/usa-map/usa-map.component';
 import { StatesListComponent } from './components/states-list/states-list.component';
+import { HttpClientModule } from '@angular/common/http';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, UsaMapComponent, StatesListComponent],
+  imports: [RouterOutlet, UsaMapComponent, StatesListComponent, HttpClientModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

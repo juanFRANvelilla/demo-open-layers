@@ -1,6 +1,6 @@
 import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Component } from '@angular/core';
-import { View, Map } from 'ol';
+import { Component, signal } from '@angular/core';
+import { View, Map, Feature } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import { OSM } from 'ol/source';
 import VectorSource from 'ol/source/Vector';
@@ -10,6 +10,9 @@ import Style from 'ol/style/Style';
 import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
 import { fromLonLat } from 'ol/proj';
+import { Geometry } from 'ol/geom';
+import { Observable } from 'rxjs';
+import { UsaStatesService } from '../usa-states.service';
 
 @Component({
   selector: 'app-usa-map',
@@ -19,25 +22,22 @@ import { fromLonLat } from 'ol/proj';
   styleUrl: './usa-map.component.scss'
 })
 export class UsaMapComponent {
-
+  private vectorSource!: VectorSource;
   private map!: Map;
+  tooltipElement!: HTMLElement;
 
-  constructor(private http: HttpClient) {}  // Inyecta HttpClient
+  constructor(private usaStatesService: UsaStatesService) {}  
 
   ngOnInit(): void {
     this.initializeMap();
+    this.tooltipElement = document.getElementById('tooltip')!;
 
-    // this.http.get<any>('src/assets/us-states.geojson').subscribe((geojsonData: any) => {
-    //   this.loadGeoJsonData(geojsonData);
-    // });
-
-    this.http.get<any>('./../us-states.geojson').subscribe((geojsonData: any) => {
+    this.usaStatesService.getStates().subscribe((geojsonData: any) => {
       this.loadGeoJsonData(geojsonData);
     });
   }
 
   private initializeMap(): void {
-    // Crear el mapa con una capa base OSM
     this.map = new Map({
       target: 'map',
       layers: [
@@ -46,62 +46,104 @@ export class UsaMapComponent {
         })
       ],
       view: new View({
-        center: [-78.66635781106866, 37.51086709291787],  // Puedes ajustar el centroffff
+        center: [-78.66635781106866, 37.51086709291787], 
         zoom: 6,
         projection: 'EPSG:3857'
       })
     });
+
+    this.map.on('pointermove', (event) => this.handlePointerMove(event));
     this.map.on('singleclick', (event) => this.handleMapClick(event));
   }
 
-  private handleMapClick(event: any) {
-    const coordinate = event.coordinate;
+  private handlePointerMove(event: any) {
     const pixel = this.map.getEventPixel(event.originalEvent);
     const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature);
 
     if (feature) {
+      
       const properties = feature.getProperties();
       const stateName = properties['ste_name'][0]; 
-      const coordinates = fromLonLat(coordinate); 
-      console.log('Coordenadas:', coordinates);
-      console.log('Estado:', stateName);
+      
+      this.showTooltip(event.coordinate, stateName);
+    } else {
+      this.hideTooltip();
+    }
+  }
+
+  private showTooltip(coordinate: number[], stateName: string) {
+    this.tooltipElement.style.display = 'block';
+    this.tooltipElement.innerHTML = stateName;
+
+    const position = this.map.getPixelFromCoordinate(coordinate);
+    this.tooltipElement.style.left = position[0] + 'px';
+    this.tooltipElement.style.top = position[1] + 'px';
+  }
+
+  private hideTooltip() {
+    this.tooltipElement.style.display = 'none';
+  }
+
+  private handleMapClick(event: any) {
+    const pixel = this.map.getEventPixel(event.originalEvent);
+    const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;;
+
+    if (feature) {
+      this.usaStatesService.selectedFeature.set(feature);
+      this.vectorSource.changed();
+
+    // const properties = feature.getProperties();
+    // const stateName = properties['ste_name'][0];
+
     } else {
       console.log('No se encontró ningún estado en esta ubicación.');
     }
   }
 
   private loadGeoJsonData(geojsonObject: any): void {
-    // Crear una fuente vectorial desde el GeoJSON cargado
     const vectorSource = new VectorSource({
       features: new GeoJSON().readFeatures(geojsonObject, {
         featureProjection: 'EPSG:3857'  
       })
     });
+    this.vectorSource = vectorSource;
 
-    // Crear una capa vectorial
     const vectorLayer = new VectorLayer({
       source: vectorSource,
-      style: new Style({
+      style: (feature) => this.getStyle(feature)
+      
+    });
+
+    this.map.addLayer(vectorLayer);
+
+    const extent = vectorSource.getExtent();
+    this.map.getView().fit(extent);
+
+  }
+
+  private getStyle(feature: any) {
+    if (feature.getProperties()['ste_name'][0] === this.usaStatesService.selectedFeature()?.getProperties()['ste_name'][0]) {
+      console.log('estilo seleccionado');
+      return new Style({
         stroke: new Stroke({
-          color: 'blue',
+          color: 'red', 
           width: 2
         }),
         fill: new Fill({
-          color: 'rgba(0, 0, 255, 0.1)'  // Color de relleno semitransparente
+          color: 'rgba(255, 0, 0, 0.5)' 
         })
+      });
+    }
+    
+    return new Style({
+      stroke: new Stroke({
+        color: 'blue',
+        width: 2
+      }),
+      fill: new Fill({
+        color: 'rgba(0, 0, 255, 0.1)'
       })
     });
-
-    // Añadir la capa vectorial al mapa
-    this.map.addLayer(vectorLayer);
-
-    // Centrar el mapa en la extensión del GeoJSON
-    const extent = vectorSource.getExtent();
-    this.map.getView().fit(extent);
   }
-
-  
-
-  
 
 }
