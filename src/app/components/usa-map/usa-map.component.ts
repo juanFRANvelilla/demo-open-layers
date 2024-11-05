@@ -158,7 +158,6 @@ export class UsaMapComponent {
 
   onSelectedFeatureChange(newFeature: any): void {
     console.log('Selected feature changed:', newFeature);
-    // Aquí puedes realizar cualquier acción necesaria
   }
 
 }

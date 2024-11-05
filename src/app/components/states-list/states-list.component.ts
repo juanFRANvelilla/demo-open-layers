@@ -12,19 +12,27 @@ import { Subscription } from 'rxjs';
   styleUrl: './states-list.component.scss'
 })
 export class StatesListComponent {
-  // private usaStateData = signal<any>(null);
   states: { code: string, name: string; selected: boolean }[] = [];
 
   constructor(private usaStatesService: UsaStatesService) {}
 
   ngOnInit(): void {
     this.usaStatesService.getStates().subscribe((geojsonData: any) => {
-      console.log('geojsonData features: ', geojsonData.features[0].properties.ste_name[0]);
       this.states = geojsonData.features.map((feature: any) => ({
         code: feature.properties.ste_code[0],
         name: feature.properties.ste_name[0],
         selected: false 
       }));
+    });
+
+    this.usaStatesService.selectedFeature.subscribe(feature => {
+      this.states.forEach(state => state.selected = false);
+      
+      const selectedState = this.states.find(state => state.code === feature.ste_code[0]);
+      if (selectedState) {
+        selectedState.selected = true;
+        this.states = [selectedState, ...this.states.filter(state => state !== selectedState)];
+      }
     });
   }
 
@@ -33,11 +41,13 @@ export class StatesListComponent {
   }
 
   onSelectedChange(state: { code: string, name: string; selected: boolean  }) {
-    this.usaStatesService.getStateByCode(state.code).subscribe((stateData: any) => {
-      console.log('estado seleccionado desde lista:', stateData);
-      this.usaStatesService.updateSelectedFeature(stateData.properties);
-    });
-    
+    if(state.selected) {
+      this.usaStatesService.getStateByCode(state.code).then((stateData: any) => {
+        this.usaStatesService.updateSelectedFeature(stateData.properties);
+      });
+    } else {
+      this.usaStatesService.updateSelectedFeature(null);
+    }
   }
 
 }
