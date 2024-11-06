@@ -1,4 +1,0 @@
-export interface StateInterface {
-  ste_code: string[];  
-  ste_name: string[];  
-}

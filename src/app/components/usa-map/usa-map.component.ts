@@ -1,5 +1,5 @@
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-import { Component, signal } from '@angular/core';
+import { HttpClientModule } from '@angular/common/http';
+import { Component } from '@angular/core';
 import { View, Map, Feature } from 'ol';
 import TileLayer from 'ol/layer/Tile';
 import { OSM } from 'ol/source';
@@ -9,10 +9,10 @@ import VectorLayer from 'ol/layer/Vector';
 import Style from 'ol/style/Style';
 import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
-import { fromLonLat } from 'ol/proj';
 import { Geometry } from 'ol/geom';
-import { Observable, Subscription } from 'rxjs';
+import { map, Subscription } from 'rxjs';
 import { UsaStatesService } from '../usa-states.service';
+import { CovidData, StateInterface } from '../model/state-interface';
 
 @Component({
   selector: 'app-usa-map',
@@ -26,7 +26,7 @@ export class UsaMapComponent {
   private vectorSource!: VectorSource;
   private map!: Map;
   tooltipElement!: HTMLElement;
-  private selectedFeature: any;
+  private stateList: StateInterface[] = [];
 
   constructor(private usaStatesService: UsaStatesService) {}  
 
@@ -34,14 +34,39 @@ export class UsaMapComponent {
     this.initializeMap();
     this.tooltipElement = document.getElementById('tooltip')!;
 
-    this.usaStatesService.getStates().subscribe((geojsonData: any) => {
-      this.loadGeoJsonData(geojsonData);
+    this.usaStatesService.getStateList().subscribe((stateList: StateInterface[]) => {
+      this.stateList = stateList;
+      this.vectorSource.changed();
     });
 
-    this.subscription = this.usaStatesService.selectedFeature.subscribe(feature => {
-      console.log('cambio en el estado seleccionado desde map:', feature);
-      this.selectedFeature = feature;
-      this.vectorSource.changed();
+    this.usaStatesService.getStates().subscribe((geojsonData: any) => {
+      this.loadGeoJsonData(geojsonData);
+      
+      // this.stateList = [];
+
+      geojsonData.features.forEach((feature: any) => {
+        const stateCode = feature.properties.ste_stusps_code;
+
+        this.usaStatesService.getCovidData(stateCode).subscribe((covidData: CovidData) => {
+          const filteredFeature: StateInterface = {
+            name: feature.properties.ste_name[0],
+            code: feature.properties.ste_code[0],
+            stateCode: stateCode,
+            selected: false,
+            totalCases: covidData.positive,
+            newCases: covidData.positiveIncrease,
+            totalHospitalized: covidData.hospitalizedCumulative,
+            hospitalizedCurrently: covidData.hospitalizedCurrently,
+            totalTest: covidData.totalTestResults
+          };
+
+          // Añadir el estado a la lista
+          this.stateList.push(filteredFeature);
+
+          // Actualizar el servicio con la lista completa
+          this.usaStatesService.setStateList(this.stateList);
+        });
+      });
     });
   }
 
@@ -98,11 +123,13 @@ export class UsaMapComponent {
 
     if (feature) {
       const properties = feature.getProperties();
-      this.usaStatesService.updateSelectedFeature(properties);
 
-    // const properties = feature.getProperties();
-    // const stateName = properties['ste_name'][0];
-
+      const selectedState = this.stateList.find(state => state.code === properties['ste_code'][0]);
+      if (selectedState) {
+        this.usaStatesService.selectState(selectedState);
+      } else {
+        console.log('No state found with the given code.');
+      }
     } else {
       console.log('No se encontró ningún estado en esta ubicación.');
     }
@@ -126,37 +153,58 @@ export class UsaMapComponent {
 
     const extent = vectorSource.getExtent();
     this.map.getView().fit(extent);
-
   }
 
+
   private getStyle(feature: any) {
-    // if (feature.getProperties()['ste_name'][0] === this.selectedFeature?.getProperties()['ste_name'][0]) {
-      if (feature.getProperties()['ste_name'][0] === this.selectedFeature?.ste_name[0]) {
-      console.log('estilo seleccionado');
+    const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
+  
+    if (filterState?.selected) {
       return new Style({
         stroke: new Stroke({
           color: 'red', 
           width: 2
         }),
         fill: new Fill({
-          color: 'rgba(255, 0, 0, 0.5)' 
+          color: 'rgba(255, 105, 180, 1)'
         })
       });
     }
-    
+  
+    if (!filterState || filterState.totalCases === undefined) {
+      return new Style({
+        stroke: new Stroke({
+          color: 'rgba(0, 0, 255, 0.3)',
+          width: 2
+        }),
+        fill: new Fill({
+          color: 'rgba(0, 0, 255, 0.1)'
+        })
+      });
+    }
+  
+    let fillColor = 'rgb(0, 255, 0)';
+  
+    if (filterState.totalCases >= 3000000) {
+      fillColor = 'rgb(255, 0, 0)';
+    } else if (filterState.totalCases >= 1000000) {
+      fillColor = 'rgb(255, 255, 0)';
+    } else if (filterState.totalCases >= 500000) {
+      fillColor = 'rgb(255, 165, 0)';
+    }
+  
     return new Style({
       stroke: new Stroke({
-        color: 'blue',
+        color: 'rgba(0, 0, 255, 0.3)',
         width: 2
       }),
       fill: new Fill({
-        color: 'rgba(0, 0, 255, 0.1)'
+        color: fillColor
       })
     });
   }
 
-
-  onSelectedFeatureChange(newFeature: any): void {
+  onselectedFeatureSetChange(newFeature: any): void {
     console.log('Selected feature changed:', newFeature);
   }
 
