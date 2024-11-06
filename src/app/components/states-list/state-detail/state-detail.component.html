@@ -1,0 +1,55 @@
+<div class="state-detail container">
+
+    <h2 class="text-center my-3">{{ state.name }}</h2>
+
+    <div class="accordion" id="stateDetailsAccordion">
+        
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingCases">
+                <button class="accordion-button" type="button" (click)="casesOpen = !casesOpen">
+                    Casos
+                </button>
+            </h2>
+            <div *ngIf="casesOpen" class="accordion-collapse show">
+                <div class="accordion-body">
+                    <p>Total de casos: {{ state.totalCases }}</p>
+                    <p>Casos hoy: {{ state.newCases }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingHospitalization">
+                <button class="accordion-button" type="button" (click)="hospitalizationOpen = !hospitalizationOpen">
+                    Hospitalización
+                </button>
+            </h2>
+            <div *ngIf="hospitalizationOpen" class="accordion-collapse show">
+                <div class="accordion-body">
+                    <p>Total hospitalizados: {{ state.totalHospitalized }}</p>
+                    <p>Actualmente hospitalizados: {{ state.hospitalizedCurrently }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingTests">
+                <button class="accordion-button" type="button" (click)="testsOpen = !testsOpen">
+                    Pruebas
+                </button>
+            </h2>
+            <div *ngIf="testsOpen" class="accordion-collapse show">
+                <div class="accordion-body">
+                    <p>Total de pruebas: {{ state.totalTest }}</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="text-center mt-3">
+        <button (click)="closeModal()" class="btn btn-primary btn-lg ms-auto d-block">
+            <i class="bi bi-check-circle me-2"></i>OK
+        </button>
+    </div>
+</div>

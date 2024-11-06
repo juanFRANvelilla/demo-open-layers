@@ -3,16 +3,18 @@ import { UsaStatesService } from '../usa-states.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { StateInterface } from '../model/state-interface';
+import { StateDetailComponent } from './state-detail/state-detail.component';
 
 @Component({
   selector: 'app-states-list',
   standalone: true,
-  imports: [FormsModule, CommonModule],
+  imports: [FormsModule, CommonModule, StateDetailComponent],
   templateUrl: './states-list.component.html',
   styleUrl: './states-list.component.scss'
 })
 export class StatesListComponent {
   stateList: StateInterface[] = [];
+  stateSelected?: StateInterface;
 
   constructor(private usaStatesService: UsaStatesService) {}
 
@@ -25,8 +27,12 @@ export class StatesListComponent {
     });
   }
 
-  viewDetails(stateName: StateInterface) {
-    console.log('ver detalles de: ', stateName);
+  viewDetails(state: any) {
+    this.stateSelected = state;
+  }
+
+  closeModal(){
+    this.stateSelected = undefined;
   }
 
   onSelectedChange(stateSelected: StateInterface) {

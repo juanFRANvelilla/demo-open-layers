@@ -1,15 +1,21 @@
 .container {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 20px;
-  }
-  
-  app-states-list {
-    flex: 1;
-  }
-  
-  app-usa-map {
-    flex: 1.5;
-  }
-  
+  margin: auto;
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.app-states-list, .app-usa-map {
+  flex: 1;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.app-usa-map{
+  flex : 1.5;
+}

@@ -3,6 +3,7 @@
     overflow-y: auto;
     border: 1px solid #ccc;
     border-radius: 4px;
+    width: 100%;
 }
   
 .state-list {
@@ -36,4 +37,69 @@
 .state-list button:hover {
     background-color: #0056b3;
 }
-  
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+    width: 80%;
+    max-width: 600px;
+    position: relative;
+}
+
+.close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.table-responsive {
+    overflow-x: auto;
+}
+
+.container-fluid .table {
+    width: 100%;
+    table-layout: auto;
+}
+
+/* Estilos para el overlay del modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1050;
+}
+
+/* Modal de tamaño completo */
+.modal-full {
+    width: 90%; /* Ocupa el 90% del ancho */
+    max-width: 1200px; /* Tamaño máximo para pantallas grandes */
+    max-height: 90vh; /* Ocupa el 90% de la altura */
+    overflow-y: auto;
+    box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.3);
+    position: relative;
+}
+
+.modal-content {
+    position: relative;
+}
