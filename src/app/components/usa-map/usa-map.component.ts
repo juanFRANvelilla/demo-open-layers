@@ -41,30 +41,36 @@ export class UsaMapComponent {
 
     this.usaStatesService.getStates().subscribe((geojsonData: any) => {
       this.loadGeoJsonData(geojsonData);
-      
-      // this.stateList = [];
 
       geojsonData.features.forEach((feature: any) => {
         const stateCode = feature.properties.ste_stusps_code;
-
+        const stateName = feature.properties.ste_name[0]; // Nombre del estado
+    
         this.usaStatesService.getCovidData(stateCode).subscribe((covidData: CovidData) => {
-          const filteredFeature: StateInterface = {
-            name: feature.properties.ste_name[0],
-            code: feature.properties.ste_code[0],
-            stateCode: stateCode,
-            selected: false,
-            totalCases: covidData.positive,
-            newCases: covidData.positiveIncrease,
-            totalHospitalized: covidData.hospitalizedCumulative,
-            hospitalizedCurrently: covidData.hospitalizedCurrently,
-            totalTest: covidData.totalTestResults
-          };
-
-          // Añadir el estado a la lista
-          this.stateList.push(filteredFeature);
-
-          // Actualizar el servicio con la lista completa
-          this.usaStatesService.setStateList(this.stateList);
+          
+          // Llama a `getPopulationByState` para obtener la población
+          this.usaStatesService.getPopulationByState(stateName).subscribe((population: number | null) => {
+            
+            // Verifica si la población fue encontrada
+            const filteredFeature: StateInterface = {
+              name: stateName,
+              code: feature.properties.ste_code[0],
+              stateCode: stateCode,
+              selected: false,
+              totalCases: covidData.positive,
+              newCases: covidData.positiveIncrease,
+              totalHospitalized: covidData.hospitalizedCumulative,
+              hospitalizedCurrently: covidData.hospitalizedCurrently,
+              totalTest: covidData.totalTestResults,
+              population: population || 0
+            };
+    
+            // Añadir el estado a la lista
+            this.stateList.push(filteredFeature);
+    
+            console.log('Estado:', filteredFeature);
+            this.usaStatesService.setStateList(this.stateList);
+          });
         });
       });
     });

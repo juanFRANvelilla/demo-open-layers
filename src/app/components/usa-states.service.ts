@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, map, Observable } from 'rxjs';
 import { CovidData, StateInterface } from '../components/model/state-interface';
 
 
@@ -48,11 +48,13 @@ export class UsaStatesService {
     
   }
 
-  getStateByCode(code: string): any {
-    return this.getStates().toPromise().then((data: any) => {
-      const features = data.features;
-      return features.find((feature: any) => feature.properties.ste_code[0] === code);
-    });
+  getPopulationByState(name: string): Observable<number | null> {
+    return this.http.get<any[]>('./../us-states-population.json').pipe(
+      map((data) => {
+        const stateData = data.find(state => state.name.toLowerCase() === name.toLowerCase());
+        return stateData ? +stateData.population.replace(/,/g, '') : null;
+      })
+    );
   }
 
   getCovidData(state: string): Observable<CovidData> {

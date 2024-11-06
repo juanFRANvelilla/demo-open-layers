@@ -7,7 +7,8 @@ export interface StateInterface {
   newCases: number;
   totalHospitalized: number;
   hospitalizedCurrently: number;
-  totalTest: number; 
+  totalTest: number;
+  population: number;
 }
 
 export interface CovidData {
