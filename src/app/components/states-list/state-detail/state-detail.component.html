@@ -1,55 +1,56 @@
-<div class="state-detail container">
+<div class="modal-overlay d-flex align-items-center justify-content-center">
+    <div class="modal-content bg-white rounded w-50" (click)="$event.stopPropagation()">
 
-    <h2 class="text-center my-3">{{ state.name }}</h2>
+        <div class="header-container">
+            <h2 class="text-center my-3">{{ state.name }}</h2>
+            <button class="btn-close m-2" (click)="closeModal()" aria-label="Close"></button>
+        </div>
 
-    <div class="accordion" id="stateDetailsAccordion">
+        <div class="expandable-container">
+            <div class="expandable-header" (click)="casesOpen = !casesOpen">
+                <span>
+                    <strong>
+                        Cases 
+                    </strong>
+                </span>
+            <span class="expandable-icon">{{ casesOpen ? '-' : '+' }}</span>
+            </div>
+            <div *ngIf="casesOpen" class="expandable-content">
+            <p><strong>Total cases: </strong>{{ state.totalCases }}</p>
+            <p><strong>New cases today: </strong>{{ state.newCases }}</p>
+            </div>
+        </div>
         
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingCases">
-                <button class="accordion-button" type="button" (click)="casesOpen = !casesOpen">
-                    Casos
-                </button>
-            </h2>
-            <div *ngIf="casesOpen" class="accordion-collapse show">
-                <div class="accordion-body">
-                    <p>Total de casos: {{ state.totalCases }}</p>
-                    <p>Casos hoy: {{ state.newCases }}</p>
-                </div>
+        <div class="expandable-container">
+            <div class="expandable-header" (click)="hospitalizationOpen = !hospitalizationOpen">
+            <span>
+                <strong>
+                    Hospitalization 
+                </strong>
+            </span>
+            <span class="expandable-icon">{{ hospitalizationOpen ? '-' : '+' }}</span>
+            </div>
+            <div *ngIf="hospitalizationOpen" class="expandable-content">
+            <p><strong>Total hospitalizated: </strong>{{ state.totalHospitalized }}</p>
+            <p><strong>Current hospitalizated: </strong>{{ state.hospitalizedCurrently }}</p>
+            </div>
+        </div>
+        
+        <div class="expandable-container">
+            <div class="expandable-header" (click)="testsOpen = !testsOpen">
+            <span><strong>Test</strong></span>
+            <span class="expandable-icon">{{ testsOpen ? '-' : '+' }}</span>
+            </div>
+            <div *ngIf="testsOpen" class="expandable-content">
+            <p><strong>Total test: </strong>{{ state.totalTest }}</p>
             </div>
         </div>
 
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingHospitalization">
-                <button class="accordion-button" type="button" (click)="hospitalizationOpen = !hospitalizationOpen">
-                    Hospitalización
-                </button>
-            </h2>
-            <div *ngIf="hospitalizationOpen" class="accordion-collapse show">
-                <div class="accordion-body">
-                    <p>Total hospitalizados: {{ state.totalHospitalized }}</p>
-                    <p>Actualmente hospitalizados: {{ state.hospitalizedCurrently }}</p>
-                </div>
-            </div>
+
+        <div class="text-center mt-3">
+            <button (click)="closeModal()" class="btn btn-primary btn-lg ms-auto d-block">
+                <i class="bi bi-check-circle me-2"></i>OK
+            </button>
         </div>
-
-        <div class="accordion-item">
-            <h2 class="accordion-header" id="headingTests">
-                <button class="accordion-button" type="button" (click)="testsOpen = !testsOpen">
-                    Pruebas
-                </button>
-            </h2>
-            <div *ngIf="testsOpen" class="accordion-collapse show">
-                <div class="accordion-body">
-                    <p>Total de pruebas: {{ state.totalTest }}</p>
-                </div>
-            </div>
-        </div>
-
-</div>
-
-    <div class="text-center mt-3">
-        <button (click)="closeModal()" class="btn btn-primary btn-lg ms-auto d-block">
-            <i class="bi bi-check-circle me-2"></i>OK
-        </button>
     </div>
 </div>

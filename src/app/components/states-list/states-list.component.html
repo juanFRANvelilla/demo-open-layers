@@ -32,16 +32,10 @@
 </div>
 
 
-<div *ngIf="stateSelected" class="modal-overlay d-flex align-items-center justify-content-center">
-  <div class="modal-content modal-full bg-white p-4 rounded" (click)="$event.stopPropagation()">
-      <app-state-detail *ngIf="stateSelected" [state]="stateSelected" (close)="closeModal()"></app-state-detail>
-      <button class="btn-close position-absolute top-0 end-0 m-2" (click)="closeModal()" aria-label="Close"></button>
-  </div>
+<div *ngIf="stateSelected" class="modal-overlay">
+    <app-state-detail *ngIf="stateSelected" [state]="stateSelected" (close)="closeModal()"></app-state-detail>
 </div>
 
-<div *ngIf="comparedStates" class="modal-overlay d-flex align-items-center justify-content-center">
-  <div class="modal-content modal-full bg-white p-4 rounded" (click)="$event.stopPropagation()">
-      <app-state-compared *ngIf="stateSelected" [states]="statesToCompare" (close)="closeModal()"></app-state-compared>
-      <button class="btn-close position-absolute top-0 end-0 m-2" (click)="closeModal()" aria-label="Close"></button>
-  </div>
+<div *ngIf="comparedStates" class="modal-overlay">
+    <app-state-compared [states]="statesToCompare" (close)="closeModal()"></app-state-compared>
 </div>

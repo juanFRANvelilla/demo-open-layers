@@ -64,11 +64,7 @@ export class UsaMapComponent {
               totalTest: covidData.totalTestResults,
               population: population || 0
             };
-    
-            // Añadir el estado a la lista
             this.stateList.push(filteredFeature);
-    
-            console.log('Estado:', filteredFeature);
             this.usaStatesService.setStateList(this.stateList);
           });
         });

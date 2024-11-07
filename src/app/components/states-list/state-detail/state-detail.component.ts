@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { StateInterface } from '../../model/state-interface';
 import { CommonModule } from '@angular/common';
 
@@ -9,13 +9,13 @@ import { CommonModule } from '@angular/common';
   templateUrl: './state-detail.component.html',
   styleUrl: './state-detail.component.scss'
 })
-export class StateDetailComponent{
+export class StateDetailComponent {
   @Input() state!: StateInterface;
   @Output() close = new EventEmitter<void>();
 
-  casesOpen = false;
-  hospitalizationOpen = false;
-  testsOpen = false;
+  casesOpen = true;
+  hospitalizationOpen = true;
+  testsOpen = true;
 
   closeModal() {
     this.close.emit();
