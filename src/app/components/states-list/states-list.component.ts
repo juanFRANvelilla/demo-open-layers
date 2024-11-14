@@ -51,11 +51,6 @@ export class StatesListComponent {
     if (statesToCompare.length == 2) {
       this.comparedStates = true;
       this.statesToCompare = statesToCompare;
-      console.log('abrir comparar', this.statesToCompare);
-      // this.dialog.open(StateComparedComponent, {
-      //   width: '1000px',
-      //   data: { states: this.statesToCompare }
-      // });
     } else {
       this.dialog.open(ErrorDialogComponent, {
         width: '250px'

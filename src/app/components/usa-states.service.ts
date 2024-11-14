@@ -29,16 +29,11 @@ export class UsaStatesService {
       return state;
     });
 
-    if(!stateChanged.selected) {
-      const selectedState = updatedStateList.find(state => state.code === stateChanged.code);
-    
-      if (selectedState) {
-        const unselectedStates = updatedStateList.filter(state => state.code !== stateChanged.code);
-        this.setStateList([selectedState, ...unselectedStates]);
-      }
-    } else {
-      this.setStateList(updatedStateList);
-    }
+    const selectedState: StateInterface[] = updatedStateList.filter(state => state.selected === true);
+    const unselectedStates: StateInterface[] = updatedStateList.filter(state => state.selected === false);
+
+    const newStateList = [...selectedState, ...unselectedStates];
+    this.setStateList(newStateList);
   }
 
   getStates(): Observable<any> {
