@@ -14,7 +14,9 @@ import { map, Subscription } from 'rxjs';
 import { UsaStatesService } from '../usa-states.service';
 import { CovidData, StateInterface } from '../model/state-interface';
 import { FormsModule } from '@angular/forms';
+import { defaults as defaultControls } from 'ol/control';
 import { CommonModule } from '@angular/common';
+import { fromLonLat } from 'ol/proj';
 
 @Component({
   selector: 'app-usa-map',
@@ -91,18 +93,20 @@ export class UsaMapComponent {
   }
 
   private initializeMap(): void {
+    const osmLayer = new TileLayer({
+      source: new OSM({
+        attributions: []
+      })
+    }); 
+
     this.map = new Map({
       target: 'map',
-      layers: [
-        new TileLayer({
-          source: new OSM()
-        })
-      ],
+      layers: [osmLayer],
       view: new View({
-        center: [27.090528, -95.265041], 
-        zoom: 10,
-        projection: 'EPSG:3857'
-      })
+        center: fromLonLat([-98.5795, 39.8283]),
+        zoom: 3,
+      }),
+      controls: defaultControls({ zoom: false, attribution: false, rotate: false })
     });
 
     this.map.on('pointermove', (event) => this.handlePointerMove(event));
@@ -169,10 +173,7 @@ export class UsaMapComponent {
       
     });
 
-    this.map.addLayer(vectorLayer);
-
-    const extent = vectorSource.getExtent();
-    this.map.getView().fit(extent);
+    this.map.addLayer(vectorLayer);  
   }
 
 
@@ -229,3 +230,4 @@ export class UsaMapComponent {
   }
 
 }
+

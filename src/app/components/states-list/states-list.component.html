@@ -19,7 +19,10 @@
               </td>
               <td>{{ state.name }}</td>
               <td>
-                  <button (click)="viewDetails(state)" class="btn btn-primary btn-sm">Details</button>
+                  <!-- <button (click)="viewDetails(state)" class="btn btn-primary btn-sm">Details</button> -->
+                  <button (click)="viewDetails(state)" class="btn btn-danger btn-sm">
+                    <i class="bi bi-eye"></i>
+                  </button>
               </td>
           </tr>
       </tbody>
