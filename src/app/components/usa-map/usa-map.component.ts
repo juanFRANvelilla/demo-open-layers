@@ -121,10 +121,10 @@ export class UsaMapComponent {
       
       const properties = feature.getProperties();
       const stateName = properties['ste_name'][0]; 
-      
-      // this.showTooltip(event.coordinate, stateName);
+    
+      this.showTooltip(event.coordinate, stateName);
     } else {
-      // this.hideTooltip();
+      this.hideTooltip();
     }
   }
 
@@ -133,8 +133,9 @@ export class UsaMapComponent {
     this.tooltipElement.innerHTML = stateName;
 
     const position = this.map.getPixelFromCoordinate(coordinate);
-    this.tooltipElement.style.left = position[0] + 'px';
-    this.tooltipElement.style.top = position[1] + 'px';
+    console.log(position);
+    this.tooltipElement.style.left = position[0] + 18 + 'px';
+    this.tooltipElement.style.top = position[1] + 25 + 'px';
   }
 
   private hideTooltip() {
