@@ -9,8 +9,41 @@
     border: 1px solid #ccc;
     padding: 5px;
     font-size: 14px;
-    pointer-events: none; /* Para que no interfiera con el mouse */
+    pointer-events: none;
     transition: opacity 0.2s ease;
     opacity: 0.8;
+}
+
+.search-container{
+    width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: transparent;
+}
+
+.position-relative {
+    position: relative;
+}
+  
+.filtered-list-container {
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 1000;
+    width: 200px; 
+    top: -5px;
+}  
+
+.filtered-list-container p {
+    margin: 0;
+    padding: 8px;
+    cursor: pointer;
+}
+  
+.filtered-list-container p:hover {
+    background-color: #f1f1f1;
 }
   

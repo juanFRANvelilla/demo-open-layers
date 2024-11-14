@@ -13,11 +13,13 @@ import { Geometry } from 'ol/geom';
 import { map, Subscription } from 'rxjs';
 import { UsaStatesService } from '../usa-states.service';
 import { CovidData, StateInterface } from '../model/state-interface';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-usa-map',
   standalone: true,
-  imports: [HttpClientModule],
+  imports: [HttpClientModule, FormsModule, CommonModule],
   templateUrl: './usa-map.component.html',
   styleUrl: './usa-map.component.scss'
 })
@@ -27,6 +29,8 @@ export class UsaMapComponent {
   private map!: Map;
   tooltipElement!: HTMLElement;
   private stateList: StateInterface[] = [];
+  filteredStateList: StateInterface[] = [];
+  searchTerm: string = '';
 
   constructor(private usaStatesService: UsaStatesService) {}  
 
@@ -70,6 +74,20 @@ export class UsaMapComponent {
         });
       });
     });
+  }
+
+  filterStates(): void {
+    if (this.searchTerm) {
+      this.filteredStateList = this.stateList.filter(state =>
+        state.name.toLowerCase().includes(this.searchTerm.toLowerCase())
+      );
+    } else {
+      this.filteredStateList = [];
+    }
+  }
+
+  selectState(state: StateInterface): void {
+    this.usaStatesService.selectState(state);
   }
 
   private initializeMap(): void {
