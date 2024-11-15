@@ -9,32 +9,45 @@ import VectorLayer from 'ol/layer/Vector';
 import Style from 'ol/style/Style';
 import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
-import { Geometry } from 'ol/geom';
-import { map, Subscription } from 'rxjs';
+import { Geometry, Polygon } from 'ol/geom';
+import Draw from 'ol/interaction/Draw';
 import { UsaStatesService } from '../usa-states.service';
 import { CovidData, StateInterface } from '../model/state-interface';
 import { FormsModule } from '@angular/forms';
 import { defaults as defaultControls } from 'ol/control';
 import { CommonModule } from '@angular/common';
-import { fromLonLat } from 'ol/proj';
+import { fromLonLat, toLonLat } from 'ol/proj';
+import { StateComparedComponent } from '../states-list/state-compared/state-compared.component';
+import { MatDialog } from '@angular/material/dialog';
+import { ErrorDialogComponent } from '../states-list/error-dialog/error-dialog.component';
 
 @Component({
   selector: 'app-usa-map',
   standalone: true,
-  imports: [HttpClientModule, FormsModule, CommonModule],
+  imports: [HttpClientModule, FormsModule, CommonModule, StateComparedComponent, ErrorDialogComponent],
   templateUrl: './usa-map.component.html',
   styleUrl: './usa-map.component.scss'
 })
 export class UsaMapComponent {
-  private subscription?: Subscription;
   private vectorSource!: VectorSource;
   private map!: Map;
   tooltipElement!: HTMLElement;
   private stateList: StateInterface[] = [];
   filteredStateList: StateInterface[] = [];
   searchTerm: string = '';
+  private draw?: Draw;
+  disabledActions = false;
+  features: Feature[] = [];
+  lastDrawnPolygon: Feature | null = null;
 
-  constructor(private usaStatesService: UsaStatesService) {}  
+  comparedStates: boolean = false;
+  statesToCompare: StateInterface[] = [];
+
+  private initialCenter: [number, number] | null = null;
+  private initialZoom: number | null = null;
+
+
+  constructor(private usaStatesService: UsaStatesService, public dialog: MatDialog) {}  
 
   ngOnInit(): void {
     this.initializeMap();
@@ -50,7 +63,7 @@ export class UsaMapComponent {
 
       geojsonData.features.forEach((feature: any) => {
         const stateCode = feature.properties.ste_stusps_code;
-        const stateName = feature.properties.ste_name[0]; // Nombre del estado
+        const stateName = feature.properties.ste_name[0];
     
         this.usaStatesService.getCovidData(stateCode).subscribe((covidData: CovidData) => {
           
@@ -114,18 +127,21 @@ export class UsaMapComponent {
   }
 
   private handlePointerMove(event: any) {
-    const pixel = this.map.getEventPixel(event.originalEvent);
-    const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature);
+    if(!this.disabledActions) {
+      const pixel = this.map.getEventPixel(event.originalEvent);
+      const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature);
 
-    if (feature) {
+      if (feature) {
+        
+        const properties = feature.getProperties();
+        const stateName = properties['ste_name'][0]; 
       
-      const properties = feature.getProperties();
-      const stateName = properties['ste_name'][0]; 
-    
-      this.showTooltip(event.coordinate, stateName);
-    } else {
-      this.hideTooltip();
+        this.showTooltip(event.coordinate, stateName);
+      } else {
+        this.hideTooltip();
+      }
     }
+    
   }
 
   private showTooltip(coordinate: number[], stateName: string) {
@@ -133,7 +149,6 @@ export class UsaMapComponent {
     this.tooltipElement.innerHTML = stateName;
 
     const position = this.map.getPixelFromCoordinate(coordinate);
-    console.log(position);
     this.tooltipElement.style.left = position[0] + 18 + 'px';
     this.tooltipElement.style.top = position[1] + 25 + 'px';
   }
@@ -142,21 +157,101 @@ export class UsaMapComponent {
     this.tooltipElement.style.display = 'none';
   }
 
-  private handleMapClick(event: any) {
-    const pixel = this.map.getEventPixel(event.originalEvent);
-    const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;
 
-    if (feature) {
-      const properties = feature.getProperties();
+  activateDraw(type: 'Polygon' | 'LineString' | 'Point'): void {
+    this.disabledActions = true;
+    if (this.draw) {
+      this.map.removeInteraction(this.draw);
+    }
 
-      const selectedState = this.stateList.find(state => state.code === properties['ste_code'][0]);
-      if (selectedState) {
-        this.usaStatesService.selectState(selectedState);
-      } else {
-        console.log('No state found with the given code.');
+    this.draw = new Draw({
+      source: this.vectorSource,
+      type: type
+    });
+    
+    this.map.addInteraction(this.draw);
+
+    this.vectorSource.changed();
+
+    this.draw.on('drawend', (event) => {
+      const feature = event.feature;
+      this.lastDrawnPolygon = feature;
+      const polygonGeometry: Polygon = feature.getGeometry() as Polygon;
+      const extent = polygonGeometry!.getExtent();
+
+
+      const view = this.map.getView();
+      const center = view.getCenter();
+      if (center) {
+          const convertedCenter = toLonLat(center);
+          if (convertedCenter.length >= 2) {
+              this.initialCenter = [convertedCenter[0], convertedCenter[1]];
+          }
       }
-    } else {
-      console.log('No se encontró ningún estado en esta ubicación.');
+      this.initialZoom = view.getZoom() ?? 0;
+
+      view.fit(extent, {
+        size: this.map.getSize(),
+        padding: [50, 50, 50, 50],
+        maxZoom: 15,
+      });
+
+      this.selectStatesByPolygon(polygonGeometry);
+      
+      setTimeout(() => {
+        // this.disabledActions = false;
+      }, 200);
+
+      this.map.removeInteraction(this.draw!);
+      
+    });  
+  }
+
+  private selectStatesByPolygon(polygon: Polygon): void {
+    const featuresInsidePolygon = this.features.filter((feature: Feature) => {
+      const featureGeometry = feature.getGeometry();
+      
+      return polygon.intersectsExtent((featureGeometry as Geometry).getExtent());
+    });
+
+    featuresInsidePolygon!.forEach((feature: any) => {
+      const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
+      this.usaStatesService.selectState(filterState!);
+    });
+  }
+
+
+  removeFeatures(): void {
+    const polygonGeometry: Polygon = this.lastDrawnPolygon!.getGeometry() as Polygon;
+    this.selectStatesByPolygon(polygonGeometry);
+
+    if (this.initialCenter && this.initialZoom !== null) {
+      this.map.getView().setCenter(fromLonLat(this.initialCenter));
+      this.map.getView().setZoom(this.initialZoom);
+    }
+
+    this.vectorSource.removeFeature(this.lastDrawnPolygon!);
+    this.lastDrawnPolygon = null;
+  }
+  
+
+  private handleMapClick(event: any) {
+    if(!this.disabledActions) {
+      const pixel = this.map.getEventPixel(event.originalEvent);
+      const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;
+
+      if (feature) {
+        const properties = feature.getProperties();
+
+        const selectedState = this.stateList.find(state => state.code === properties['ste_code'][0]);
+        if (selectedState) {
+          this.usaStatesService.selectState(selectedState);
+        } else {
+          console.log('No state found with the given code.');
+        }
+      } else {
+        console.log('No se encontró ningún estado en esta ubicación.');
+      }
     }
   }
 
@@ -167,6 +262,8 @@ export class UsaMapComponent {
       })
     });
     this.vectorSource = vectorSource;
+
+    this.features = vectorSource.getFeatures();
 
     const vectorLayer = new VectorLayer({
       source: vectorSource,
@@ -179,7 +276,14 @@ export class UsaMapComponent {
 
 
   private getStyle(feature: any) {
-    const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
+    const properties = feature.getProperties();
+    const featureCode = properties['ste_code'] ? properties['ste_code'][0] : null;
+    
+    let filterState: StateInterface | undefined;
+    if (featureCode) {
+      filterState = this.stateList.find(state => state.code === featureCode);
+    }
+    
   
     if (filterState?.selected) {
       return new Style({
@@ -226,8 +330,21 @@ export class UsaMapComponent {
     });
   }
 
-  onselectedFeatureSetChange(newFeature: any): void {
-    console.log('Selected feature changed:', newFeature);
+  openComparedComponent() {
+    const statesToCompare = this.stateList.filter(state => state.selected);
+    if (statesToCompare.length > 1) {
+      this.comparedStates = true;
+      this.statesToCompare = statesToCompare;
+    } else {
+      this.dialog.open(ErrorDialogComponent, {
+        width: '250px'
+      });
+    }
+
+  }
+
+  closeModal(){
+    this.comparedStates = false;
   }
 
 }

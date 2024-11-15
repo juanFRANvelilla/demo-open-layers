@@ -17,8 +17,9 @@ export class StateComparedComponent implements OnInit {
   hospitalizationOpen = true;
   testsOpen = true;
 
-  maxHospitalizatedPercentage = 0;
-  maxCasePercentage = 0;
+  minCasePercentage = 100;
+  minHospitalizatedPercentage = 100;
+  
 
   ngOnInit(): void {
     this.states = this.states?.map(state => {
@@ -32,12 +33,12 @@ export class StateComparedComponent implements OnInit {
 
   private calculateMaxPercentage(percentaje: number, type: string){
     if(type === 'case'){
-      if(percentaje > this.maxCasePercentage){
-        this.maxCasePercentage = percentaje;
+      if(percentaje < this.minCasePercentage){
+        this.minCasePercentage = percentaje;
       }
     } else {
-      if(percentaje > this.maxHospitalizatedPercentage){
-        this.maxHospitalizatedPercentage = percentaje;
+      if(percentaje < this.minHospitalizatedPercentage){
+        this.minHospitalizatedPercentage = percentaje;
       }
     }
   }
@@ -52,11 +53,6 @@ export class StateComparedComponent implements OnInit {
     const percentaje = (state.totalCases / state.population) * 100;
     this.calculateMaxPercentage(percentaje, 'case');
     return percentaje;
-  }
-
-  addPercentageToState(state: StateInterface): void {
-    (state as any).casePercentage = this.calculateCasePercentage(state);
-    (state as any).hospitalizatedPercentage = this.calculateHospitalizatedPercentage(state);
   }
 
   closeModal() {

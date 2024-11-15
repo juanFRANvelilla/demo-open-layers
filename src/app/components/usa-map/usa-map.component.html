@@ -12,9 +12,28 @@
         <p (click)="selectState(state)">{{ state.name }}</p>
       </div>
     </div>
+
+    <div class="polygon-buttons position-absolute bottom-position">
+      <button (click)="activateDraw('Polygon')" class="btn feature-buttons">
+        <i class="bi bi-hexagon"></i>
+      </button>
+    </div>
+
+    <div class="polygon-buttons position-absolute top-position" *ngIf="lastDrawnPolygon">
+      <button (click)="removeFeatures()" class="btn feature-buttons">
+        <i class="bi bi-trash"></i>
+      </button>
+      <button (click)="openComparedComponent()" class="btn feature-buttons">
+        <i class="bi bi-grid-3x3-gap"></i>
+      </button>
+    </div>
   
     <div id="map" class="map" style="width: 100%; height: 88vh">
       <div id="tooltip" class="tooltip" style="display: none;"></div>
     </div>
 
+</div>
+
+<div *ngIf="comparedStates" class="modal-overlay">
+  <app-state-compared [states]="statesToCompare" (close)="closeModal()"></app-state-compared>
 </div>

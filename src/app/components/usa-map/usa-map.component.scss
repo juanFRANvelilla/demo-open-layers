@@ -47,4 +47,41 @@
 .filtered-list-container p:hover {
     background-color: #f1f1f1;
 }
+
+
+.polygon-buttons {
+    z-index: 1000;
+    display: flex;
+    gap: 3px;
+}
+
+.top-position {
+    top: 5px;
+    right: 2px;
+
+}
+
+.bottom-position {
+    bottom: 5px;
+    left: 5px;
+}
+
+
+.feature-buttons {
+    background-color: rgba(0, 123, 255, 0.8);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-radius: 10px;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.feature-buttons:hover {
+    background-color: rgba(0, 123, 255, 1);
+    transform: scale(1.05);
+    cursor: pointer;
+}
   

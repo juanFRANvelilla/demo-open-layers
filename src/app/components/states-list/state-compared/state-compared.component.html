@@ -16,7 +16,7 @@
                             <strong>
                                 Cases 
                             </strong>
-                            <strong [ngStyle]="{ color: state.casePercentage === maxCasePercentage ? 'red' : 'green' }">
+                            <strong [ngStyle]="{ color: state.casePercentage === minCasePercentage ? 'green' : 'red' }">
                                 ({{ state.casePercentage.toFixed(2) }}%)
                             </strong>
                         </span>
@@ -34,7 +34,7 @@
                         <strong>
                             Hospitalization 
                         </strong>
-                        <strong [ngStyle]="{ color: state.hospitalizedPercentage === maxHospitalizatedPercentage ? 'red' : 'green' }">
+                        <strong [ngStyle]="{ color: state.hospitalizedPercentage === minHospitalizatedPercentage ? 'green' : 'red' }">
                             ({{ state.hospitalizedPercentage.toFixed(2) }}%)
                         </strong>
                     </span>

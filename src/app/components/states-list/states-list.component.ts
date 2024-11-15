@@ -48,7 +48,7 @@ export class StatesListComponent {
 
   openComparedComponent() {
     const statesToCompare = this.stateList.filter(state => state.selected);
-    if (statesToCompare.length == 2) {
+    if (statesToCompare.length > 1) {
       this.comparedStates = true;
       this.statesToCompare = statesToCompare;
     } else {
