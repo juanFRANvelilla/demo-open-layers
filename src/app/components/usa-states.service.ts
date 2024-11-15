@@ -21,10 +21,10 @@ export class UsaStatesService {
     this.stateList.next(newStateList);
   }
 
-  selectState(stateChanged: StateInterface): void{
+  selectState(stateChanged: StateInterface, active: boolean): void{
     const updatedStateList = this.stateList.value.map(state => {
       if (state.code === stateChanged.code) {
-        return { ...state, selected: !state.selected };
+        return { ...state, selected: active };
       }
       return state;
     });

@@ -5,7 +5,7 @@ import TileLayer from 'ol/layer/Tile';
 import { OSM } from 'ol/source';
 import VectorSource from 'ol/source/Vector';
 import GeoJSON from 'ol/format/GeoJSON';
-import VectorLayer from 'ol/layer/Vector';
+import { Vector as VectorLayer } from 'ol/layer';
 import Style from 'ol/style/Style';
 import Stroke from 'ol/style/Stroke';
 import Fill from 'ol/style/Fill';
@@ -20,6 +20,10 @@ import { fromLonLat, toLonLat } from 'ol/proj';
 import { StateComparedComponent } from '../states-list/state-compared/state-compared.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent } from '../states-list/error-dialog/error-dialog.component';
+import Interaction from 'ol/interaction/Interaction';
+import { Modify } from 'ol/interaction';
+import { Select } from 'ol/interaction';
+import { click } from 'ol/events/condition';
 
 @Component({
   selector: 'app-usa-map',
@@ -30,6 +34,8 @@ import { ErrorDialogComponent } from '../states-list/error-dialog/error-dialog.c
 })
 export class UsaMapComponent {
   private vectorSource!: VectorSource;
+  private polygonSource!: VectorSource;
+  private vectorLayer!: VectorLayer;
   private map!: Map;
   tooltipElement!: HTMLElement;
   private stateList: StateInterface[] = [];
@@ -38,7 +44,9 @@ export class UsaMapComponent {
   private draw?: Draw;
   disabledActions = false;
   features: Feature[] = [];
-  lastDrawnPolygon: Feature | null = null;
+  selectedPolygon: Feature | null = null;
+
+  modifyInteraction: Modify | null = null;
 
   comparedStates: boolean = false;
   statesToCompare: StateInterface[] = [];
@@ -52,6 +60,10 @@ export class UsaMapComponent {
   ngOnInit(): void {
     this.initializeMap();
     this.tooltipElement = document.getElementById('tooltip')!;
+    // vector source con las features que dibujemos nosotros
+    this.polygonSource = new VectorSource<Feature>({
+      features: []
+    });
 
     this.usaStatesService.getStateList().subscribe((stateList: StateInterface[]) => {
       this.stateList = stateList;
@@ -101,8 +113,8 @@ export class UsaMapComponent {
     }
   }
 
-  selectState(state: StateInterface): void {
-    this.usaStatesService.selectState(state);
+  selectState(state: StateInterface, active: boolean): void {
+    this.usaStatesService.selectState(state, active);
   }
 
   private initializeMap(): void {
@@ -131,7 +143,7 @@ export class UsaMapComponent {
       const pixel = this.map.getEventPixel(event.originalEvent);
       const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature);
 
-      if (feature) {
+      if (feature && feature.getProperties()['ste_code']) {
         
         const properties = feature.getProperties();
         const stateName = properties['ste_name'][0]; 
@@ -141,7 +153,31 @@ export class UsaMapComponent {
         this.hideTooltip();
       }
     }
-    
+  }
+
+  private handleMapClick(event: any) {
+    if(!this.disabledActions) {
+      const pixel = this.map.getEventPixel(event.originalEvent);
+      const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;
+
+      if (feature) {
+        const properties = feature.getProperties();
+
+        // probar si hay codigo para comprobar que no es una feature de estado
+        if (!properties['ste_code']) {
+          this.selectedPolygon = feature;
+        }
+
+        const selectedState = this.stateList.find(state => state.code === properties['ste_code'][0]);
+        if (selectedState) {
+          this.usaStatesService.selectState(selectedState, !selectedState.selected);
+        } else {
+          console.log('No state found with the given code.');
+        }
+      } else {
+        console.log('No se encontró ningún estado en esta ubicación.');
+      }
+    }
   }
 
   private showTooltip(coordinate: number[], stateName: string) {
@@ -169,13 +205,14 @@ export class UsaMapComponent {
       type: type
     });
     
+    
     this.map.addInteraction(this.draw);
-
-    this.vectorSource.changed();
 
     this.draw.on('drawend', (event) => {
       const feature = event.feature;
-      this.lastDrawnPolygon = feature;
+      this.polygonSource.addFeature(feature);
+      
+      this.selectedPolygon = feature;
       const polygonGeometry: Polygon = feature.getGeometry() as Polygon;
       const extent = polygonGeometry!.getExtent();
 
@@ -199,15 +236,42 @@ export class UsaMapComponent {
       this.selectStatesByPolygon(polygonGeometry);
       
       setTimeout(() => {
-        // this.disabledActions = false;
-      }, 200);
+        this.disabledActions = false;
+      }, 500);
 
       this.map.removeInteraction(this.draw!);
       
     });  
   }
 
+  private getFeaturesInsidePolygon(polygon: Polygon): Feature[] {
+    const featuresInsidePolygon = this.features.filter((feature: Feature) => {
+      const featureGeometry = feature.getGeometry() as Polygon;
+      const coordinates = featureGeometry.getCoordinates()[0];
+      return coordinates.some(coordinate => polygon.intersectsCoordinate(coordinate));
+    });
+    return featuresInsidePolygon;
+  }
+
   private selectStatesByPolygon(polygon: Polygon): void {
+    const featuresInsidePolygon = this.getFeaturesInsidePolygon(polygon);
+
+    featuresInsidePolygon!.forEach((feature: any) => {
+      const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
+      this.usaStatesService.selectState(filterState!, !filterState!.selected);
+    });
+  }
+
+  private deselectStatesByPolygon(polygon: Polygon): void {
+    const featuresInsidePolygon = this.getFeaturesInsidePolygon(polygon);
+
+    featuresInsidePolygon!.forEach((feature: any) => {
+      const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
+      this.usaStatesService.selectState(filterState!, false);
+    });
+  }
+
+  private selectChecStatesByPolygon(polygon: Polygon): void {
     const featuresInsidePolygon = this.features.filter((feature: Feature) => {
       const featureGeometry = feature.getGeometry();
       
@@ -215,44 +279,26 @@ export class UsaMapComponent {
     });
 
     featuresInsidePolygon!.forEach((feature: any) => {
+      
       const filterState = this.stateList.find(state => state.code === feature.getProperties()['ste_code'][0]);
-      this.usaStatesService.selectState(filterState!);
+      this.usaStatesService.selectState(filterState!, true);
     });
   }
 
 
-  removeFeatures(): void {
-    const polygonGeometry: Polygon = this.lastDrawnPolygon!.getGeometry() as Polygon;
-    this.selectStatesByPolygon(polygonGeometry);
+
+  removeSelectFeature(): void {
+    const polygonGeometry: Polygon = this.selectedPolygon!.getGeometry() as Polygon;
+    this.deselectStatesByPolygon(polygonGeometry);
 
     if (this.initialCenter && this.initialZoom !== null) {
       this.map.getView().setCenter(fromLonLat(this.initialCenter));
       this.map.getView().setZoom(this.initialZoom);
     }
 
-    this.vectorSource.removeFeature(this.lastDrawnPolygon!);
-    this.lastDrawnPolygon = null;
-  }
-  
-
-  private handleMapClick(event: any) {
-    if(!this.disabledActions) {
-      const pixel = this.map.getEventPixel(event.originalEvent);
-      const feature = this.map.forEachFeatureAtPixel(pixel, (feature) => feature) as Feature<Geometry> | undefined;
-
-      if (feature) {
-        const properties = feature.getProperties();
-
-        const selectedState = this.stateList.find(state => state.code === properties['ste_code'][0]);
-        if (selectedState) {
-          this.usaStatesService.selectState(selectedState);
-        } else {
-          console.log('No state found with the given code.');
-        }
-      } else {
-        console.log('No se encontró ningún estado en esta ubicación.');
-      }
-    }
+    this.vectorSource.removeFeature(this.selectedPolygon!);
+    this.polygonSource.removeFeature(this.selectedPolygon!);
+    this.selectedPolygon = null;
   }
 
   private loadGeoJsonData(geojsonObject: any): void {
@@ -270,8 +316,79 @@ export class UsaMapComponent {
       style: (feature) => this.getStyle(feature)
       
     });
+    this.vectorLayer = vectorLayer;
 
     this.map.addLayer(vectorLayer);  
+  }
+
+  activateModifyTool(): void {
+    this.disabledActions = true;
+  
+    if (this.modifyInteraction) {
+      this.map.removeInteraction(this.modifyInteraction);
+    }
+  
+    if(this.polygonSource.getFeatures().length === 0) {
+      this.deactivateModifyTool();
+      this.disabledActions = false;
+    }
+
+    else {
+      const oldPolygon = this.selectedPolygon!.getGeometry()!.clone() as Polygon;
+      this.modifyInteraction = new Modify({
+        source: this.polygonSource,
+      });
+    
+      this.map.addInteraction(this.modifyInteraction);
+  
+      this.modifyInteraction.on('modifyend', (event) => {
+        // Desseleccionar los estados del polígono anterior
+        this.selectStatesByPolygon(oldPolygon);
+
+      
+        const modifiedFeatures = event.features;
+        modifiedFeatures.forEach((feature: Feature) => {
+          const geometry = feature.getGeometry();
+          
+          if (geometry && geometry.getType() === 'Polygon') {
+            const newPolygonGeometry: Polygon = geometry as Polygon;
+            // Seleccionar los estados del polígono modificado
+            this.selectStatesByPolygon(newPolygonGeometry);
+          } else {
+            console.error('La geometría modificada no es un polígono o es inválida');
+          }
+        });
+      
+        this.deactivateModifyTool();
+        this.disabledActions = false;
+      });
+      
+      
+  
+    
+      const selectInteraction = new Select({
+        condition: click,
+        layers: [this.vectorLayer],
+        filter: (feature) => {
+          return feature.getProperties()['ste_code'] == undefined;
+        }
+      });
+    
+      this.map.addInteraction(selectInteraction);
+    
+      selectInteraction.on('select', (e) => {
+        if (e.selected.length > 0) {
+          const selectedFeature = e.selected[0];
+        }
+      });
+
+    }
+  }
+  
+  deactivateModifyTool(): void {
+    if (this.modifyInteraction) {
+      this.map.removeInteraction(this.modifyInteraction);
+    }
   }
 
 

@@ -9,7 +9,7 @@
     
     <div *ngIf="filteredStateList.length > 0" class="filtered-list-container position-absolute">
       <div *ngFor="let state of filteredStateList">
-        <p (click)="selectState(state)">{{ state.name }}</p>
+        <p (click)="selectState(state, state.selected)">{{ state.name }}</p>
       </div>
     </div>
 
@@ -17,10 +17,13 @@
       <button (click)="activateDraw('Polygon')" class="btn feature-buttons">
         <i class="bi bi-hexagon"></i>
       </button>
+      <button (click)="activateModifyTool()" class="btn feature-buttons">
+        <i class="bi bi-trash"></i>
+      </button>
     </div>
 
-    <div class="polygon-buttons position-absolute top-position" *ngIf="lastDrawnPolygon">
-      <button (click)="removeFeatures()" class="btn feature-buttons">
+    <div class="polygon-buttons position-absolute top-position" *ngIf="selectedPolygon">
+      <button (click)="removeSelectFeature()" class="btn feature-buttons">
         <i class="bi bi-trash"></i>
       </button>
       <button (click)="openComparedComponent()" class="btn feature-buttons">

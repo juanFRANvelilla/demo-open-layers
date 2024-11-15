@@ -42,8 +42,7 @@ export class StatesListComponent {
   }
 
   onSelectedChange(stateSelected: StateInterface) {
-    stateSelected.selected = !stateSelected.selected;
-    this.usaStatesService.selectState(stateSelected);
+    this.usaStatesService.selectState(stateSelected, stateSelected.selected!);
   }
 
   openComparedComponent() {
