@@ -22,6 +22,7 @@ export class UsaStatesService {
   }
 
   selectState(stateChanged: StateInterface, active: boolean): void{
+    stateChanged.selected = active;
     const updatedStateList = this.stateList.value.map(state => {
       if (state.code === stateChanged.code) {
         return { ...state, selected: active };
@@ -29,10 +30,10 @@ export class UsaStatesService {
       return state;
     });
 
-    const selectedState: StateInterface[] = updatedStateList.filter(state => state.selected === true);
+    const selectedState: StateInterface[] = updatedStateList.filter(state => state.selected === true && state.code !== stateChanged.code);
     const unselectedStates: StateInterface[] = updatedStateList.filter(state => state.selected === false);
 
-    const newStateList = [...selectedState, ...unselectedStates];
+    const newStateList = active ? [stateChanged, ...selectedState, ...unselectedStates] : [...selectedState, ...unselectedStates];
     this.setStateList(newStateList);
   }
 
