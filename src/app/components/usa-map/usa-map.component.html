@@ -15,16 +15,24 @@
   </div>
 
   <div class="polygon-buttons position-absolute bottom-position">
-    <button (click)="activateDraw('Polygon')" class="btn feature-buttons">
+    <button (click)="activateDrawPolygon()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygon !== null }">
       <i class="bi bi-hexagon"></i>
     </button>
     <button (click)="activateModifyTool()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': modifyInteraction !== null }"
     [disabled]="!hasDrwanPolygons()">
       <i class="bi bi-arrows-angle-contract"></i>
     </button>
-    <button (click)="activateHandTool()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': translateInteraction !== null }"
+    <button (click)="activateTranformTool()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': translateInteraction !== null }"
       [disabled]="!hasDrwanPolygons()">
       <i class="bi bi-arrows-move"></i>
+    </button>
+    <button (click)="activateDrawLine()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawLine !== null }"
+      [disabled]="!hasDrwanPolygons()">
+      <i class="bi bi-intersect"></i>
+    </button>
+    <button (click)="intersectPolygons()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygonCut !== null }"
+      [disabled]="!hasDrwanPolygons()">
+      <i class="bi bi-scissors"></i>
     </button>
 
   </div>
@@ -47,3 +55,4 @@
 <div *ngIf="comparedStates" class="modal-overlay">
   <app-state-compared [states]="statesToCompare" (close)="closeModal()"></app-state-compared>
 </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsts/2.6.1/jsts.js"></script>
