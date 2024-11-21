@@ -10,7 +10,7 @@
 
   <div *ngIf="filteredStateList.length > 0" class="filtered-list-container position-absolute">
     <div *ngFor="let state of filteredStateList">
-      <p (click)="selectState(state, state.selected)">{{ state.name }}</p>
+      <p (click)="selectState(state, !state.selected)">{{ state.name }}</p>
     </div>
   </div>
 
@@ -33,6 +33,10 @@
     <button (click)="intersectPolygons()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygonCut !== null }"
       [disabled]="!hasDrwanPolygons()">
       <i class="bi bi-scissors"></i>
+    </button>
+    <button (click)="unionPolygons()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygonUnion !== null }"
+      [disabled]="!hasDrwanPolygons()">
+      <i class="bi bi-intersect"></i>
     </button>
     <button (click)="intersectContainPolygon()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygonContainCut !== null }"
       [disabled]="!hasDrwanPolygons()">

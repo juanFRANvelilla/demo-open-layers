@@ -61,6 +61,7 @@ export class UsaMapComponent {
 
   drawPolygon: Draw | null = null;
   drawPolygonCut: Draw | null = null;
+  drawPolygonUnion: Draw | null = null;
   drawPolygonContainCut: Draw | null = null;
   drawLine: Draw | null = null;
   modifyInteraction: Modify | null = null;
@@ -603,6 +604,66 @@ export class UsaMapComponent {
     }
   }
 
+  unionPolygons() {
+    if (this.drawPolygonUnion) {
+      this.deactivateAllInteractionTool();
+      this.disabledActions = false;
+    } else {
+      this.deactivateAllInteractionTool();
+      // bloquear seleccion y tooltip
+      this.disabledActions = true;
+
+      // crear un nuevo poligono y agregarlo al vectorSource
+      this.drawPolygonUnion = new Draw({
+        type: 'Polygon',
+      });
+      this.map.addInteraction(this.drawPolygonUnion);
+
+      this.drawPolygonUnion.on('drawend', (event) => {
+        const feature = event.feature;
+
+        this.selectedPolygon = feature;
+        const polygonGeometryCut: Polygon = feature.getGeometry() as Polygon;
+        // obtener objeto de poligono en formato turf
+        const polygonGeoJsonCut = turf.polygon(
+          polygonGeometryCut.getCoordinates()
+        );
+
+        // recorrer los poligonos existentes
+        this.polygonVectorSource.getFeatures().forEach((polygonFeature) => {
+          const polygonGeometry = polygonFeature.getGeometry() as Polygon;
+          // obtener el poligo iterado en formato turf
+          const polygonGeoJson = turf.polygon(polygonGeometry.getCoordinates());
+          console.log('polygonGeoJson:', polygonGeoJson);
+          // if (
+          //   turf.booleanIntersects(polygonGeoJson, polygonGeoJsonCut) &&
+          //   !turf.booleanContains(polygonGeoJson, polygonGeoJsonCut) &&
+          //   !turf.booleanContains(polygonGeoJsonCut, polygonGeoJson)
+          // ) {
+            // si los poligonos se cruzan y ademas no debe de contener ninguno al otro, calcular la diferencia entre los dos poligonos
+            const resultPolygon = turf.union(
+              turf.featureCollection([polygonGeoJson, polygonGeoJsonCut])
+            );
+
+            console.log('resultPolygon union:', resultPolygon);
+
+            this.polygonVectorSource.removeFeature(polygonFeature);
+            const newCoordinates = resultPolygon!.geometry.coordinates;
+            this.addFeatrueFromCoordinates(newCoordinates);
+
+            // Marcar como seleccionados los estados de la nueva geometria
+            this.selectStatesByPolygon(polygonGeometryCut, true);
+          // }
+
+          this.deactivateAllInteractionTool();
+          setTimeout(() => {
+            this.disabledActions = false;
+          }, 500);
+        });
+      });
+    }
+  }
+
   private addFeatrueFromCoordinates(newCoordinates: any) {
     const newPolygonFeature =
       this.createPolygonFeatureFromCoordinates(newCoordinates);
@@ -616,13 +677,6 @@ export class UsaMapComponent {
       geometry: polygonGeometry,
     });
   }
-
-  // transformar las coordenadas a formato compatible para hacer el setCoordinates en openlayers
-  // private transformedCoordinates(coordinates: any) {
-  //   return coordinates.map((ring: any) =>
-  //     ring.map((coord: any) => [coord[0], coord[1]])
-  //   );
-  // }
 
   activateDrawPolygon(): void {
     if (this.drawPolygon) {
@@ -805,6 +859,10 @@ export class UsaMapComponent {
     if (this.drawPolygonCut) {
       this.map.removeInteraction(this.drawPolygonCut);
       this.drawPolygonCut = null;
+    }
+    if (this.drawPolygonUnion) {
+      this.map.removeInteraction(this.drawPolygonUnion);
+      this.drawPolygonUnion = null;
     }
     if (this.drawPolygonContainCut) {
       this.map.removeInteraction(this.drawPolygonContainCut);
