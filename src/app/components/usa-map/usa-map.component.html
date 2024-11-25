@@ -28,7 +28,7 @@
     </button>
     <button (click)="activateDrawLine()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawLine !== null }"
       [disabled]="!hasDrwanPolygons()">
-      <i class="bi bi-intersect"></i>
+      <i class="bi bi-slash-lg"></i>
     </button>
     <button (click)="intersectPolygons()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': drawPolygonCut !== null }"
       [disabled]="!hasDrwanPolygons()">

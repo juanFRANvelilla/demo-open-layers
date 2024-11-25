@@ -27,6 +27,9 @@ import * as turf from '@turf/turf';
 // @ts-ignore
 import Transform from 'ol-ext/interaction/Transform';
 import booleanIntersects from '@turf/boolean-intersects';
+import * as turfHelpers from "@turf/helpers";
+import turfDifference from '@turf/difference';
+import pointInPolygon from "@turf/boolean-point-in-polygon";
 
 @Component({
   selector: 'app-usa-map',
@@ -72,6 +75,9 @@ export class UsaMapComponent {
 
   private initialCenter: [number, number] | null = null;
   private initialZoom: number | null = null;
+
+
+  // polygons: any[] = [];
 
   constructor(
     private usaStatesService: UsaStatesService,
@@ -280,187 +286,99 @@ export class UsaMapComponent {
     });
   }
 
-  // activateDrawLine(): void {
-  //   if (this.draw) {
-  //     this.map.removeInteraction(this.draw);
-  //   }
-
-  //   this.draw = new Draw({
-  //     source: this.vectorSource,
-  //     type: 'LineString',
-  //   });
-
-  //   this.map.addInteraction(this.draw);
-
-  //   this.draw.on('drawend', (event) => {
-  //     const lineFeature = event.feature;
-  //     const lineGeometry = lineFeature.getGeometry() as LineString;
-
-  //     console.log('Line drawn:', lineGeometry.getCoordinates());
-
-  //     // Check for intersection with existing polygons
-  //     this.polygonVectorSource.getFeatures().forEach((polygonFeature) => {
-  //       const polygonGeometry = polygonFeature.getGeometry() as Polygon;
-  //       if (polygonGeometry.intersectsExtent(lineGeometry.getExtent())) {
-  //         var polygonGeoJson = polygonGeometry.getCoordinates()[0].map(function (coord) {
-  //           return { type: 'Feature', geometry: { type: 'Point', coordinates: coord } };
-  //         });
-  //         var lineGeoJson = {
-  //           type: 'Feature',
-  //           geometry: {
-  //             type: 'LineString',
-  //             coordinates: lineGeometry.getCoordinates()
-  //           }
-  //         };
-
-  //         // Calcular la intersección entre el polígono y la línea
-  //         var polygonGeoJsonObject = turf.polygon([polygonGeoJson.map(function(p) { return p.geometry.coordinates; })]);
-  //         var lineGeoJsonObject = turf.lineString(lineGeometry.getCoordinates());
-
-  //         // Obtener la intersección
-  //         var intersection = turf.lineIntersect(polygonGeoJsonObject, lineGeoJsonObject);
-
-  //         // Mostrar la intersección (si la hay)
-  //         if (intersection.features.length > 0) {
-  //           console.log("Intersección:", intersection);
-  //         }
-  //       }
-  //     });
-
-  //     this.map.removeInteraction(this.draw!);
-  //   });
-  // }
-
-  //   activateDrawLine(): void {
-  //     if (this.draw) {
-  //         this.map.removeInteraction(this.draw);
-  //     }
-
-  //     this.draw = new Draw({
-  //         source: this.vectorSource,
-  //         type: 'LineString',
-  //     });
-
-  //     this.map.addInteraction(this.draw);
-
-  //     this.draw.on('drawend', (event) => {
-  //         const lineFeature = event.feature;
-  //         const lineGeometry = lineFeature.getGeometry() as LineString;
-
-  //         console.log('Line drawn:', lineGeometry.getCoordinates());
-
-  //         // Convertir la línea a GeoJSON
-  //         const lineGeoJson = turf.lineString(lineGeometry.getCoordinates());
-
-  //         this.polygonVectorSource.getFeatures().forEach((polygonFeature) => {
-  //             const polygonGeometry = polygonFeature.getGeometry() as Polygon;
-  //             const polygonCoordinates = polygonGeometry.getCoordinates();
-
-  //             // Convertir el polígono a GeoJSON
-  //             const polygonGeoJson = turf.polygon(polygonCoordinates);
-
-  //             // Dividir el polígono con la línea
-  //             const split = turf.lineIntersect(polygonGeoJson, lineGeoJson);
-
-  //             let nPoints = split.features.length;
-  //             console.log('featrues split:', split.features);
-  //             console.log('Número de puntos:', nPoints);
-
-  //             const bufferedLine = turf.buffer(lineGeoJson, 0.1, {units: 'kilometers'});
-
-  //             const splitPolygons = turf.difference(turf.featureCollection([polygonGeoJson, bufferedLine!]));
-
-  //             // Mostrar los polígonos resultantes
-  //             console.log('Polígonos resultantes:', splitPolygons);
-  //             this.polygonVectorSource.addFeature(splitPolygons as Polygon);
-  //         });
-
-  //         this.map.removeInteraction(this.draw!);
-  //     });
-  // }
-
   activateDrawLine(): void {
     if (this.drawLine) {
-      this.map.removeInteraction(this.drawLine);
+      this.deactivateAllInteractionTool();
+      this.disabledActions = false;
+    } else {
+      this.deactivateAllInteractionTool();
+      // bloquear seleccion y tooltip
+      this.disabledActions = true;
+
+      this.drawLine = new Draw({
+        type: 'LineString',
+        maxPoints: 2,
+      });
+      this.map.addInteraction(this.drawLine);
+      this.drawLine.on("drawend", event => {
+        const feature = event.feature;
+        const coordinates = (feature.getGeometry() as LineString).getCoordinates()!;
+  
+        this.getSplits(coordinates);
+        this.deactivateAllInteractionTool();
+        setTimeout(() => {
+          this.disabledActions = false;
+        }, 500);
+      });
     }
+  }
 
-    this.drawLine = new Draw({
-      source: this.vectorSource,
-      type: 'LineString',
-    });
-
-    this.map.addInteraction(this.drawLine);
-
-    this.drawLine.on('drawend', (event) => {
-      const lineFeature = event.feature;
-      const lineGeometry = lineFeature.getGeometry() as LineString;
-
-      console.log('Line drawn:', lineGeometry.getCoordinates());
-
-      // Convertir la línea a GeoJSON
-      const lineGeoJson = turf.lineString(lineGeometry.getCoordinates());
-
-      this.polygonVectorSource.getFeatures().forEach((polygonFeature) => {
-        const polygonGeometry = polygonFeature.getGeometry() as Polygon;
-        const polygonCoordinates = polygonGeometry.getCoordinates();
-
-        // Convertir el polígono a GeoJSON
-        const polygonGeoJson = turf.polygon(polygonCoordinates);
-
-        const lineIntersec = turf.lineIntersect(polygonGeoJson, lineGeoJson);
-        console.log('lineIntersec:', lineIntersec);
-        // const lineFalta = turf.lineString(lineIntersec);
-
-        const linePolygon = turf.polygonToLine(polygonGeoJson);
-        // console.log('linePolygon:', linePolygon);
-        // console.log('lineGeoJson:', lineGeoJson);
-
-        let sides: any = [];
-
-        if (linePolygon.type === 'Feature') {
-          const lines =
-            linePolygon.geometry.type === 'MultiLineString'
-              ? linePolygon.geometry.coordinates
-              : [linePolygon.geometry.coordinates];
-          lines.forEach((line) => {
-            const split = turf.lineSplit(turf.lineString(line), lineGeoJson);
-            sides.push(split);
+  getSplits(coordinates: any) {
+    this.polygonVectorSource.forEachFeature((feature: Feature) => {
+      const geometry = feature.getGeometry();
+      if (geometry instanceof Polygon) {
+        const polygonCoordinates = geometry.getCoordinates();
+        const splits = this.split(polygonCoordinates, coordinates);
+        if (splits) {
+          this.polygonVectorSource.removeFeature(feature);
+          splits.forEach((split: any) => {
+            this.addFeatrueFromCoordinates(split);
           });
         }
-
-        let newPolygons: any = [];
-
-        sides.forEach((splitFeatureCollection: any) => {
-          splitFeatureCollection.features.forEach((splitLineFeature: any) => {
-            const coords = splitLineFeature.geometry.coordinates;
-
-            // Cierra el polígono asegurándose de que el primer punto sea igual al último
-            if (coords[0] !== coords[coords.length - 1]) {
-              coords.push(coords[0]); // Añadir el primer punto al final para cerrarlo
-            }
-
-            // Crear un polígono a partir de las líneas divididas
-            const newPolygon = turf.polygon([coords]);
-            newPolygons.push(newPolygon);
-          });
-        });
-
-        console.log('New Polygons:', newPolygons);
-
-        // let nPoints = split.features.length;
-        // console.log('featrues split:', split.features);
-        // console.log('Número de puntos:', nPoints);
-
-        // const bufferedLine = turf.buffer(lineGeoJson, 0.1, {units: 'kilometers'});
-
-        // const splitPolygons = turf.difference(turf.featureCollection([polygonGeoJson, bufferedLine!]));
-
-        // Mostrar los polígonos resultantes
-        // console.log('Polígonos resultantes:', splitPolygons);
-      });
-
-      // this.map.removeInteraction(this.draw!);
+      }
     });
+  }
+
+  addFeature(geometry: any, constr: any) {
+    const geom = new constr(geometry);
+    const feature = new Feature();
+    feature.setGeometry(geom);
+    feature.setStyle(
+      new Style({
+        fill: new Fill({
+          color: `rgba(${Math.random() * 255}, ${Math.random() *
+            255}, ${Math.random() * 255}, .4)`
+        }),
+        stroke: new Stroke({
+          width: 1,
+          color: "transparent"
+        })
+      })
+    );
+    this.polygonVectorSource.addFeature(feature);
+  }
+
+  split(polyCoords: any, lineCoords: any) {
+    if (this.lineSplitsPoly(polyCoords, lineCoords)) {
+      const polygon1 = turfHelpers.polygon(polyCoords);
+      const polygon2 = turfHelpers.polygon(this.line2Poly(lineCoords));
+      const difference = turfDifference(turf.featureCollection([polygon1, polygon2]));
+      if (difference!.geometry.coordinates.length > 1) {
+        return this.flatDifference(difference!.geometry.coordinates);
+      }
+    }
+    return null;
+  }
+
+  lineSplitsPoly(polyCoords: any, lineCoords: any) {
+    const poly = turfHelpers.polygon(polyCoords);
+    const point1 = turfHelpers.point(lineCoords[0]);
+    const point2 = turfHelpers.point(lineCoords[1]);
+    return !pointInPolygon(point1, poly) && !pointInPolygon(point2, poly);
+  }
+
+  line2Poly(lineCoords: any) {
+    const point_3 = [lineCoords[0][0], lineCoords[0][1] - 1];
+    const point_4 = [lineCoords[1][0], lineCoords[1][1] - 1];
+    return [[...lineCoords, point_4, point_3, lineCoords[0]]];
+  }
+
+  flatDifference(difference: any[]) {
+    return difference.reduce(
+      (prev: any[], curr: any[]) =>
+        prev.concat(curr.length === 1 ? [curr] : curr.map(c => [c])),
+      []
+    );
   }
 
   intersectPolygons() {
@@ -508,8 +426,7 @@ export class UsaMapComponent {
             if (resultPolygon?.geometry.type == 'Polygon') {
               const newCoordinates = resultPolygon!.geometry.coordinates;
               this.addFeatrueFromCoordinates(newCoordinates);
-            } 
-            else if (resultPolygon?.geometry.type == 'MultiPolygon') {
+            } else if (resultPolygon?.geometry.type == 'MultiPolygon') {
               resultPolygon!.geometry.coordinates.forEach((newCoordinates) => {
                 this.addFeatrueFromCoordinates(newCoordinates);
               });
@@ -576,15 +493,6 @@ export class UsaMapComponent {
             this.polygonVectorSource.removeFeature(polygonFeature);
             const newCoordinates = resultPolygon!.geometry.coordinates;
             this.addFeatrueFromCoordinates(newCoordinates);
-            // if (resultPolygon?.geometry.type == 'Polygon') {
-            //   const newCoordinates = resultPolygon!.geometry.coordinates;
-            //   this.addFeatrueFromCoordinates(newCoordinates);
-            // } 
-            // else if (resultPolygon?.geometry.type == 'MultiPolygon') {
-            //   resultPolygon!.geometry.coordinates.forEach((newCoordinates) => {
-            //     this.addFeatrueFromCoordinates(newCoordinates);
-            //   });
-            // }
 
             if (!this.polygonVectorSource.hasFeature(feature)) {
               // agregamos la nueva geometria solo si no lo esta
@@ -623,10 +531,10 @@ export class UsaMapComponent {
         const feature = event.feature;
 
         this.selectedPolygon = feature;
-        const polygonGeometryCut: Polygon = feature.getGeometry() as Polygon;
+        const polygonGeometryAdd: Polygon = feature.getGeometry() as Polygon;
         // obtener objeto de poligono en formato turf
-        const polygonGeoJsonCut = turf.polygon(
-          polygonGeometryCut.getCoordinates()
+        const polygonGeoJsonAdd = turf.polygon(
+          polygonGeometryAdd.getCoordinates()
         );
 
         // recorrer los poligonos existentes
@@ -634,27 +542,19 @@ export class UsaMapComponent {
           const polygonGeometry = polygonFeature.getGeometry() as Polygon;
           // obtener el poligo iterado en formato turf
           const polygonGeoJson = turf.polygon(polygonGeometry.getCoordinates());
-          console.log('polygonGeoJson:', polygonGeoJson);
-          // if (
-          //   turf.booleanIntersects(polygonGeoJson, polygonGeoJsonCut) &&
-          //   !turf.booleanContains(polygonGeoJson, polygonGeoJsonCut) &&
-          //   !turf.booleanContains(polygonGeoJsonCut, polygonGeoJson)
-          // ) {
-            // si los poligonos se cruzan y ademas no debe de contener ninguno al otro, calcular la diferencia entre los dos poligonos
+          
+          if (turf.booleanIntersects(polygonGeoJson, polygonGeoJsonAdd)){
             const resultPolygon = turf.union(
-              turf.featureCollection([polygonGeoJson, polygonGeoJsonCut])
+              turf.featureCollection([polygonGeoJson, polygonGeoJsonAdd])
             );
-
-            console.log('resultPolygon union:', resultPolygon);
-
+  
             this.polygonVectorSource.removeFeature(polygonFeature);
             const newCoordinates = resultPolygon!.geometry.coordinates;
             this.addFeatrueFromCoordinates(newCoordinates);
-
+  
             // Marcar como seleccionados los estados de la nueva geometria
-            this.selectStatesByPolygon(polygonGeometryCut, true);
-          // }
-
+            this.selectStatesByPolygon(polygonGeometryAdd, true);
+          }
           this.deactivateAllInteractionTool();
           setTimeout(() => {
             this.disabledActions = false;
@@ -750,10 +650,6 @@ export class UsaMapComponent {
 
   // recorre todos los poligonos que hay en el vector para marcar sus estados como seleccionados
   updateSelectedStatesByPolygon() {
-    console.log(
-      'poligonos para seleccionar :',
-      this.polygonVectorSource.getFeatures().length
-    );
     this.polygonVectorSource.getFeatures().forEach((feature) => {
       const polygonGeometry = feature.getGeometry() as Polygon;
       this.selectStatesByPolygon(polygonGeometry, true);
