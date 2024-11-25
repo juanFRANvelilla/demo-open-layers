@@ -20,3 +20,9 @@
   padding-bottom: 10px;
 }
 
+.flex-item {
+  flex: 1 1 45%;
+  min-width: 250px;
+  box-sizing: border-box;
+  margin: 10px;
+}
