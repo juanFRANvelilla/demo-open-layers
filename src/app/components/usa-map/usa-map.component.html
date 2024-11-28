@@ -42,6 +42,9 @@
       [disabled]="!hasDrwanPolygons()">
       <i class="bi bi-box-arrow-in-down"></i>
     </button>
+    <button (click)="setDragAndDropInteraction()" class="btn feature-buttons" [ngClass]="{ 'btn-selected': dragAndDropInteraction !== null }">
+      <i class="bi bi-file-earmark-plus"></i>
+    </button>
 
   </div>
 
@@ -64,3 +67,10 @@
   <app-state-compared [states]="statesToCompare" (close)="closeModal()"></app-state-compared>
 </div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsts/2.6.1/jsts.js"></script>
+
+
+<div *ngIf="dragAndDropInteraction !== null" class="drag-drop-dialog">
+  <div class="dialog-content">
+    <p>Arrastra un fichero GeoJSON al mapa</p>
+  </div>
+</div>

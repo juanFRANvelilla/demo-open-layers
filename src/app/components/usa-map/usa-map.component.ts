@@ -1,10 +1,7 @@
 import { HttpClientModule } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { View, Map, Feature } from 'ol';
-import TileLayer from 'ol/layer/Tile';
 import { OSM } from 'ol/source';
-import VectorSource from 'ol/source/Vector';
-import GeoJSON from 'ol/format/GeoJSON';
 import { Vector as VectorLayer } from 'ol/layer';
 import Style from 'ol/style/Style';
 import Stroke from 'ol/style/Stroke';
@@ -18,7 +15,7 @@ import { defaults as defaultControls } from 'ol/control';
 import { CommonModule } from '@angular/common';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { StateComparedComponent } from '../states-list/state-compared/state-compared.component';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ErrorDialogComponent } from '../states-list/error-dialog/error-dialog.component';
 import { Modify, Translate } from 'ol/interaction';
 import { Select } from 'ol/interaction';
@@ -30,6 +27,14 @@ import booleanIntersects from '@turf/boolean-intersects';
 import * as turfHelpers from "@turf/helpers";
 import turfDifference from '@turf/difference';
 import pointInPolygon from "@turf/boolean-point-in-polygon";
+import {
+  DragAndDrop,
+} from 'ol/interaction.js';
+import { GeoJSON, TopoJSON} from 'ol/format.js';
+import {
+  Tile as TileLayer,
+} from 'ol/layer.js';
+import {Vector as VectorSource} from 'ol/source.js';
 
 @Component({
   selector: 'app-usa-map',
@@ -76,8 +81,8 @@ export class UsaMapComponent {
   private initialCenter: [number, number] | null = null;
   private initialZoom: number | null = null;
 
-
-  // polygons: any[] = [];
+  dragAndDropInteraction: DragAndDrop| null = null;;
+  link!: HTMLAnchorElement;
 
   constructor(
     private usaStatesService: UsaStatesService,
@@ -284,6 +289,38 @@ export class UsaMapComponent {
       );
       this.usaStatesService.selectState(filterState!, active);
     });
+  }
+
+  setDragAndDropInteraction(): void {
+    if (this.dragAndDropInteraction) {
+      this.deactivateAllInteractionTool();
+      this.disabledActions = false;
+    } else {
+      this.deactivateAllInteractionTool();
+      // bloquear seleccion y tooltip
+      this.disabledActions = true;
+      this.dragAndDropInteraction = new DragAndDrop({
+        formatConstructors: [
+          GeoJSON,
+          new TopoJSON(),
+        ],
+      });
+
+      this.map.addInteraction(this.dragAndDropInteraction);
+  
+      this.dragAndDropInteraction.on('addfeatures', (event) => {
+        const vectorSource = new VectorSource({
+          features: event.features,
+        });
+        const vectorLayer = new VectorLayer({
+          source: vectorSource,
+        });
+        this.map.addLayer(vectorLayer);
+        this.map.getView().fit(vectorSource.getExtent());
+        this.deactivateAllInteractionTool();
+        this.disabledActions = false;
+      });
+    }
   }
 
   activateDrawLine(): void {
@@ -782,6 +819,11 @@ export class UsaMapComponent {
       this.map.removeInteraction(this.translateInteraction);
       this.translateInteraction = null;
     }
+    if(this.dragAndDropInteraction){
+      this.map.removeInteraction(this.dragAndDropInteraction);
+      this.dragAndDropInteraction = null;
+    }
+    
   }
 
   private getStyle(feature: any) {
