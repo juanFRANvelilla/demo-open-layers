@@ -7,11 +7,19 @@ import { StateDetailComponent } from './state-detail/state-detail.component';
 import { StateComparedComponent } from './state-compared/state-compared.component';
 import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent } from './error-dialog/error-dialog.component';
+import { ViewMode } from '../model/view-mode';
+import { Subscription } from 'rxjs';
+import { Feature } from 'ol';
+import { Polygon } from 'ol/geom';
+import VectorLayer from 'ol/layer/Vector';
+import { LayerSelected } from '../model/layer-selected';
+
+
 
 @Component({
   selector: 'app-states-list',
   standalone: true,
-  imports: [FormsModule, CommonModule, StateDetailComponent, StateComparedComponent, ErrorDialogComponent],
+  imports: [FormsModule, CommonModule, StateDetailComponent, StateComparedComponent],
   templateUrl: './states-list.component.html',
   styleUrl: './states-list.component.scss'
 })
@@ -20,16 +28,35 @@ export class StatesListComponent {
   stateSelected?: StateInterface;
   comparedStates: boolean = false;
   statesToCompare: StateInterface[] = [];
+  viewMode: ViewMode = ViewMode.LIST_STATES;
+  ViewMode = ViewMode;
+  selectedPolygon: Feature | null = null;
+  mapLayers: LayerSelected[] = [];
 
   constructor(private usaStatesService: UsaStatesService, public dialog: MatDialog) {}
 
   ngOnInit(): void {
     this.usaStatesService.getStateList().subscribe((stateList: StateInterface[]) => {
       this.stateList = stateList;
-      this.stateList.forEach(state => {
-
-      });
     });
+
+    this.usaStatesService.getViewMode().subscribe((viewMode: ViewMode) => {
+      this.viewMode = viewMode;
+    });
+
+    this.usaStatesService.getSelectedPolygon().subscribe((selectedPolygon: Feature | null) => {
+      this.selectedPolygon = selectedPolygon;
+    });
+
+    this.usaStatesService.getMapLayers().subscribe((mapLayers: LayerSelected[]) => {
+      this.mapLayers = mapLayers;
+    });
+  }
+
+  getSelectedPolygonArea(): string {
+    const polygon = this.selectedPolygon?.getGeometry() as Polygon;
+    const area = polygon.getArea();
+    return `${area.toFixed(2)} m²`;
   }
 
   viewDetails(state: any) {
@@ -55,7 +82,10 @@ export class StatesListComponent {
         width: '250px'
       });
     }
+  }
 
+  onLayerSelectedChange(layerSelected: LayerSelected) {
+    this.usaStatesService.manageMapLayer(layerSelected.selected, layerSelected.layer);
   }
 
 }

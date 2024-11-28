@@ -48,6 +48,18 @@
 
   </div>
 
+  <div class="modeView-buttons position-absolute bottom-0 end-0">
+    <button (click)="changeViewMode(viewMode.LIST_STATES)" class="btn feature-buttons">
+      <i class="bi bi-hand-index"></i>
+    </button>
+    <button (click)="changeViewMode(viewMode.POLYGON_AREA)" class="btn feature-buttons" [disabled]="!selectedPolygon">
+        <i class="bi bi-wrench"></i>
+    </button>
+    <button (click)="changeViewMode(viewMode.LAYERS)" class="btn feature-buttons">
+      <i class="bi bi-layers"></i>
+    </button>
+  </div>
+
   <div class="polygon-buttons position-absolute top-position" *ngIf="selectedPolygon">
     <button (click)="removeSelectFeature()" class="btn feature-buttons">
       <i class="bi bi-trash"></i>

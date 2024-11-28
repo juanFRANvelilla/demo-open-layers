@@ -15,7 +15,7 @@ import { defaults as defaultControls } from 'ol/control';
 import { CommonModule } from '@angular/common';
 import { fromLonLat, toLonLat } from 'ol/proj';
 import { StateComparedComponent } from '../states-list/state-compared/state-compared.component';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { ErrorDialogComponent } from '../states-list/error-dialog/error-dialog.component';
 import { Modify, Translate } from 'ol/interaction';
 import { Select } from 'ol/interaction';
@@ -35,6 +35,8 @@ import {
   Tile as TileLayer,
 } from 'ol/layer.js';
 import {Vector as VectorSource} from 'ol/source.js';
+import { ViewMode } from '../model/view-mode';
+import { LayerSelected } from '../model/layer-selected';
 
 @Component({
   selector: 'app-usa-map',
@@ -44,7 +46,6 @@ import {Vector as VectorSource} from 'ol/source.js';
     FormsModule,
     CommonModule,
     StateComparedComponent,
-    ErrorDialogComponent,
   ],
   templateUrl: './usa-map.component.html',
   styleUrl: './usa-map.component.scss',
@@ -53,7 +54,6 @@ export class UsaMapComponent {
   private vectorSource!: VectorSource;
   private polygonVectorSource!: VectorSource;
 
-  // private statesVectorLayer!: VectorLayer;
   private polygonVectorLayer!: VectorLayer;
   private map!: Map;
   tooltipElement!: HTMLElement;
@@ -83,6 +83,8 @@ export class UsaMapComponent {
 
   dragAndDropInteraction: DragAndDrop| null = null;;
   link!: HTMLAnchorElement;
+
+  viewMode = ViewMode;
 
   constructor(
     private usaStatesService: UsaStatesService,
@@ -133,6 +135,17 @@ export class UsaMapComponent {
           });
       });
     });
+
+    this.usaStatesService.getMapLayers().subscribe((mapLayers: LayerSelected[]) => {
+      mapLayers.forEach((layerSelected) => {
+        layerSelected.layer.setVisible(layerSelected.selected);
+      });
+    });
+  }
+
+  private setSelectedFeature(feature: Feature) {
+    this.selectedPolygon = feature;
+    this.usaStatesService.setSelectedPolygon(feature);
   }
 
   private loadGeoJsonData(geojsonObject: any): void {
@@ -148,6 +161,7 @@ export class UsaMapComponent {
       source: this.vectorSource,
       style: (feature) => this.getStyle(feature),
     });
+    statesVectorLayer.set('name', 'StatesLayer');
 
     // vector source con las features que dibujemos nosotros
     this.polygonVectorSource = new VectorSource<Feature>({
@@ -157,10 +171,13 @@ export class UsaMapComponent {
     this.polygonVectorLayer = new VectorLayer({
       source: this.polygonVectorSource,
     });
+    this.polygonVectorLayer.set('name', 'PolygonLayer');
 
     // dos layers, uno para los estados y otro para los poligonos
     this.map.addLayer(statesVectorLayer);
+    this.usaStatesService.manageMapLayer(true, statesVectorLayer);
     this.map.addLayer(this.polygonVectorLayer);
+    this.usaStatesService.manageMapLayer(true, this.polygonVectorLayer);
   }
 
   filterStates(): void {
@@ -234,7 +251,7 @@ export class UsaMapComponent {
 
         // probar si hay codigo para comprobar que no es una feature de estado
         if (!properties['ste_code']) {
-          this.selectedPolygon = feature;
+          this.setSelectedFeature(feature);
         }
 
         const selectedState = this.stateList.find(
@@ -315,7 +332,17 @@ export class UsaMapComponent {
         const vectorLayer = new VectorLayer({
           source: vectorSource,
         });
+        
+        // Logica para poder asignar un nombre unico a la capa
+        let newLayerName = 'ExternalLayer';
+        let increaseNumber = 1;
+        while (this.existLayerName(newLayerName)) {
+          newLayerName = `ExternalLayer-${increaseNumber}`;
+          increaseNumber++;
+        }
+        vectorLayer.set('name', newLayerName);
         this.map.addLayer(vectorLayer);
+        this.usaStatesService.manageMapLayer(true, vectorLayer);
         this.map.getView().fit(vectorSource.getExtent());
         this.deactivateAllInteractionTool();
         this.disabledActions = false;
@@ -436,7 +463,7 @@ export class UsaMapComponent {
       this.drawPolygonCut.on('drawend', (event) => {
         const feature = event.feature;
 
-        this.selectedPolygon = feature;
+        this.setSelectedFeature(feature);
         const polygonGeometryCut: Polygon = feature.getGeometry() as Polygon;
         // obtener objeto de poligono en formato turf
         const polygonGeoJsonCut = turf.polygon(
@@ -505,7 +532,7 @@ export class UsaMapComponent {
       this.drawPolygonContainCut.on('drawend', (event) => {
         const feature = event.feature;
 
-        this.selectedPolygon = feature;
+        this.setSelectedFeature(feature);
         const polygonGeometryCut: Polygon = feature.getGeometry() as Polygon;
         // obtener objeto de poligono en formato turf
         const polygonGeoJsonCut = turf.polygon(
@@ -567,7 +594,7 @@ export class UsaMapComponent {
       this.drawPolygonUnion.on('drawend', (event) => {
         const feature = event.feature;
 
-        this.selectedPolygon = feature;
+        
         const polygonGeometryAdd: Polygon = feature.getGeometry() as Polygon;
         // obtener objeto de poligono en formato turf
         const polygonGeoJsonAdd = turf.polygon(
@@ -587,8 +614,8 @@ export class UsaMapComponent {
   
             this.polygonVectorSource.removeFeature(polygonFeature);
             const newCoordinates = resultPolygon!.geometry.coordinates;
-            this.addFeatrueFromCoordinates(newCoordinates);
-  
+            const newFeature = this.addFeatrueFromCoordinates(newCoordinates);
+            this.setSelectedFeature(newFeature);
             // Marcar como seleccionados los estados de la nueva geometria
             this.selectStatesByPolygon(polygonGeometryAdd, true);
           }
@@ -601,11 +628,12 @@ export class UsaMapComponent {
     }
   }
 
-  private addFeatrueFromCoordinates(newCoordinates: any) {
+  private addFeatrueFromCoordinates(newCoordinates: any): Feature {
     const newPolygonFeature =
       this.createPolygonFeatureFromCoordinates(newCoordinates);
 
     this.polygonVectorSource.addFeature(newPolygonFeature);
+    return newPolygonFeature;
   }
 
   private createPolygonFeatureFromCoordinates(coordinates: any) {
@@ -632,7 +660,7 @@ export class UsaMapComponent {
       this.drawPolygon.on('drawend', (event) => {
         const feature = event.feature;
 
-        this.selectedPolygon = feature;
+        this.setSelectedFeature(feature);
         const polygonGeometry: Polygon = feature.getGeometry() as Polygon;
         const extent = polygonGeometry!.getExtent();
 
@@ -674,6 +702,7 @@ export class UsaMapComponent {
     this.vectorSource.removeFeature(this.selectedPolygon!);
     this.polygonVectorSource.removeFeature(this.selectedPolygon!);
     this.selectedPolygon = null;
+    this.usaStatesService.setSelectedPolygon(null);
     this.updateSelectedStatesByPolygon();
   }
 
@@ -897,4 +926,16 @@ export class UsaMapComponent {
   closeModal() {
     this.comparedStates = false;
   }
+
+  changeViewMode(viewMode: ViewMode) {
+    this.usaStatesService.setViewMode(viewMode);
+  }
+
+  existLayerName(name: string): boolean {
+    const layers = this.map.getLayers().getArray();
+    const layerFiltered =  layers.find(layer => layer.get('name') === name);
+    return layerFiltered ? true : false
+  }
+
+  
 }

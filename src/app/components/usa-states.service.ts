@@ -2,6 +2,10 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, map, Observable } from 'rxjs';
 import { CovidData, StateInterface } from '../components/model/state-interface';
+import { ViewMode } from './model/view-mode';
+import { Feature } from 'ol';
+import VectorLayer from 'ol/layer/Vector';
+import { LayerSelected } from './model/layer-selected';
 
 
 @Injectable({
@@ -9,9 +13,48 @@ import { CovidData, StateInterface } from '../components/model/state-interface';
 })
 export class UsaStatesService {
   private stateList = new BehaviorSubject<StateInterface[]>([]);
-
+  private viewMode = new BehaviorSubject<ViewMode>(ViewMode.LIST_STATES);
+  private selectedPolygon = new BehaviorSubject<Feature | null>(null);
+  private mapLayers = new BehaviorSubject<LayerSelected[]>([]);
 
   constructor(private http: HttpClient) { }
+
+  getSelectedPolygon(): Observable<Feature | null> {
+    return this.selectedPolygon.asObservable();
+  }
+
+  setSelectedPolygon(polygon: Feature | null) {
+    this.selectedPolygon.next(polygon);
+  }
+
+  getViewMode(): Observable<ViewMode> {
+    return this.viewMode.asObservable();
+  }
+
+  setViewMode(viewMode: ViewMode) {
+    this.viewMode.next(viewMode);
+  }
+
+  addLayerSelected(newLayerSelected: LayerSelected): void {
+    this.mapLayers.next([...this.mapLayers.value, newLayerSelected]);
+  }
+
+  manageMapLayer(selected: boolean, newLayer: VectorLayer): void {
+    const layer = this.mapLayers.value.find(layer => layer.layer.get('name') === newLayer.get('name'));
+    //si la capa ya existe, se actualiza el estado de la capa
+    if (layer) {
+      layer.selected = selected;
+      this.mapLayers.next([...this.mapLayers.value]);
+    } else {
+      // si es una nueva capa se agreaga a la lista
+      const newLayerSelected: LayerSelected = { layer: newLayer, selected: selected };
+      this.addLayerSelected(newLayerSelected);
+    }
+  }
+
+  getMapLayers(): Observable<LayerSelected[]> {
+    return this.mapLayers.asObservable();
+  }
 
   getStateList(): Observable<StateInterface[]> {
     return this.stateList.asObservable();
