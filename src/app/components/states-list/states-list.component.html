@@ -1,28 +1,27 @@
 <div *ngIf="viewMode == ViewMode.LIST_STATES">
     <div class="scroll-container">
-        <table class="table table-hover table-responsive state-list w-100">
-            <thead class="table-dark">
-                <tr>
-                    <th scope="col">Select</th>
-                    <th scope="col">State</th>
-                    <th scope="col">Detail</th>
-                </tr>
+        <table class="table table-hover table-bordered state-list w-100">
+            <thead>
+              <tr>
+                <th scope="col" class="text-center">Select</th>
+                <th scope="col" class="text-center">State</th>
+                <th scope="col" class="text-center">Detail</th>
+              </tr>
             </thead>
             <tbody>
-                <tr *ngFor="let state of stateList">
-                    <td>
-                        <input type="checkbox" [(ngModel)]="state.selected" (change)="onSelectedChange(state)"
-                            class="form-check-input" />
-                    </td>
-                    <td>{{ state.name }}</td>
-                    <td>
-                        <button (click)="viewDetails(state)" class="btn btn-danger btn-sm">
-                            <i class="bi bi-eye"></i>
-                        </button>
-                    </td>
-                </tr>
+              <tr *ngFor="let state of stateList" [class.table-active]="state.selected">
+                <td class="text-center align-middle">
+                  <input type="checkbox" [(ngModel)]="state.selected" (change)="onSelectedChange(state)" class="form-check-input" />
+                </td>
+                <td class="align-middle">{{ state.name }}</td>
+                <td class="text-center align-middle">
+                  <button (click)="viewDetails(state)" class="btn btn-primary btn-sm">
+                    <i class="bi bi-eye"></i>
+                  </button>
+                </td>
+              </tr>
             </tbody>
-        </table>
+          </table>
     </div>
     <div class="text-start mt-1">
         <button class="btn btn-primary btn-lg" (click)="openComparedComponent()">
@@ -34,7 +33,7 @@
 <div *ngIf="viewMode == ViewMode.LAYERS">
     <div class="scroll-container">
         <table class="table table-hover table-responsive state-list w-100">
-            <thead class="table-dark">
+            <thead>
                 <tr>
                     <th scope="col">Select</th>
                     <th scope="col">Layer</th>
