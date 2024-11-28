@@ -22,11 +22,15 @@
     "@angular/platform-browser-dynamic": "^18.2.0",
     "@angular/router": "^18.2.0",
     "@ng-bootstrap/ng-bootstrap": "^17.0.1",
+    "@turf/turf": "^7.1.0",
+    "@types/ol": "^6.5.3",
     "bootstrap": "^5.3.3",
     "bootstrap-icons": "^1.11.3",
     "ol": "^10.2.1",
+    "ol-ext": "^4.0.24",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
+    "turf": "^3.0.14",
     "zone.js": "~0.14.10"
   },
   "devDependencies": {
