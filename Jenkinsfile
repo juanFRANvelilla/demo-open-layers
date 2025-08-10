@@ -9,19 +9,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/juanFRANvelilla/demo-open-layers.git'
-            }
-        }
-
-        stage('Install dependencies') {
-            steps {
-                sh 'npm install'
-            }
-        }
-
-        stage('Build Angular app') {
-            steps {
-                sh 'npm run build -- --configuration development'
+                checkout scm
             }
         }
 
@@ -33,24 +21,13 @@ pipeline {
             }
         }
 
-        /*
-        stage('Push Docker image') {
+        stage('Deploy') {
             steps {
                 script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-credentials-id') {
-                        docker.image("${env.IMAGE_NAME}:${env.IMAGE_TAG}").push()
-                    }
+                    sh "docker rm -f angular-app-container || true"
+                    sh "docker run -d --name angular-app-container -p 8080:80 ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
-        */
-
-        /*
-        stage('Deploy') {
-            steps {
-                // Aquí comandos para desplegar
-            }
-        }
-        */
     }
 }
