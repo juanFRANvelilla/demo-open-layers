@@ -7,6 +7,13 @@ pipeline {
     }
 
     stages {
+        stage('Check Docker') {
+            steps {
+                sh 'docker --version || echo "Docker no está disponible"'
+                sh 'which docker || echo "Comando docker no encontrado"'
+                sh 'groups || id'
+            }
+        }
         stage('Checkout') {
             steps {
                 checkout scm
