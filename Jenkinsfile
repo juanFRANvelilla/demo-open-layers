@@ -2,39 +2,54 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'mi-angular-app'
-        IMAGE_TAG = 'latest'
+        IMAGE_NAME = "miusuario/demo-open-layers"
+        IMAGE_TAG = "latest"
     }
 
     stages {
-        stage('Check Docker') {
-            steps {
-                sh 'docker --version || echo "Docker no está disponible"'
-                sh 'which docker || echo "Comando docker no encontrado"'
-                sh 'groups || id'
-            }
-        }
         stage('Checkout') {
             steps {
                 checkout scm
             }
         }
 
-        stage('Build Docker image') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("${env.IMAGE_NAME}:${env.IMAGE_TAG}")
+                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Run Container (Optional)') {
             steps {
                 script {
-                    sh "docker rm -f angular-app-container || true"
-                    sh "docker run -d --name angular-app-container -p 8080:80 ${env.IMAGE_NAME}:${env.IMAGE_TAG}"
+                    // Esto solo es para pruebas en Jenkins, no para producción
+                    sh "docker run -d -p 8080:8080 --name demo-open-layers ${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
+        }
+
+        stage('Push to Registry (Optional)') {
+            when {
+                expression { return env.DOCKERHUB_USER && env.DOCKERHUB_PASS }
+            }
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
+                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker ps -a'
+        }
+        cleanup {
+            sh 'docker rm -f demo-open-layers || true'
         }
     }
 }
