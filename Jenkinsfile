@@ -1,60 +1,63 @@
 pipeline {
     agent {
-        docker {
-            image 'docker:24.0.5' // Imagen con cliente Docker
-            args '--network host -v /var/run/docker.sock:/var/run/docker.sock'
+        kubernetes {
+            inheritFrom 'kaniko'
+            defaultContainer 'kaniko'
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            spec:
+              containers:
+              - name: kaniko
+                image: 'gcr.io/kaniko-project/executor:debug'
+                command: ['sleep']
+                args: ['infinity']
+                volumeMounts:
+                - name: docker-config
+                  mountPath: /kaniko/.docker
+                - name: ca-certificate
+                  mountPath: /kaniko/.docker/certs/
+              restartPolicy: Never
+              volumes:
+              - name: docker-config
+                configMap:
+                  name: docker-auth-config
+              - name: ca-certificate
+                hostPath:
+                  path: /nfs/lab-jenkins/certs/
+            """
         }
     }
 
     environment {
-        IMAGE_NAME = "miusuario/demo-open-layers"
-        IMAGE_TAG = "latest"
+        REGISTRY_URL = "harbor.server.local"
+        IMAGE_NAME = "danielbeltejar/demo-open-layers"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                script {
-                    docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
+                container('kaniko') {
+                    checkout scm
                 }
             }
         }
 
-        stage('Run Container (Optional)') {
+        stage('Build & Push Docker Image') {
             steps {
-                script {
-                    // Esto solo es para pruebas en Jenkins, no para producción
-                    sh "docker run -d -p 8080:8080 --name demo-open-layers ${IMAGE_NAME}:${IMAGE_TAG}"
+                container('kaniko') {
+                    sh """
+                    /kaniko/executor \
+                      --context=`pwd` \
+                      --dockerfile=`pwd`/Dockerfile \
+                      --destination=${REGISTRY_URL}/${IMAGE_NAME}:${IMAGE_TAG} \
+                      --destination=${REGISTRY_URL}/${IMAGE_NAME}:latest \
+                      --registry-certificate "${REGISTRY_URL}=/kaniko/.docker/certs/ca.crt" \
+                      --cache=false
+                    """
                 }
             }
-        }
-
-        stage('Push to Registry (Optional)') {
-            when {
-                expression { return env.DOCKERHUB_USER && env.DOCKERHUB_PASS }
-            }
-            steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials-id') {
-                        docker.image("${IMAGE_NAME}:${IMAGE_TAG}").push()
-                    }
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            sh 'docker ps -a'
-        }
-        cleanup {
-            sh 'docker rm -f demo-open-layers || true'
         }
     }
 }
