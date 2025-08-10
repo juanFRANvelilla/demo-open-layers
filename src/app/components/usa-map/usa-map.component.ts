@@ -95,15 +95,15 @@ export class UsaMapComponent {
     this.initializeMap();
     this.tooltipElement = document.getElementById('tooltip')!;
 
-    this.usaStatesService
+    this.usaStatesService.getStates().subscribe((geojsonData: any) => {
+      this.loadGeoJsonData(geojsonData);
+
+      this.usaStatesService
       .getStateList()
       .subscribe((stateList: StateInterface[]) => {
         this.stateList = stateList;
         this.vectorSource.changed();
       });
-
-    this.usaStatesService.getStates().subscribe((geojsonData: any) => {
-      this.loadGeoJsonData(geojsonData);
 
       geojsonData.features.forEach((feature: any) => {
         const stateCode = feature.properties.ste_stusps_code;

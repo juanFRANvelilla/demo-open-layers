@@ -81,20 +81,17 @@ export class UsaStatesService {
   }
 
   getStates(): Observable<any> {
-    // return this.http.get<any>('assets/us-states.geojson');
-    const data = this.http.get<any>('./../us-states.geojson');
-    return data;
-    
+    return this.http.get<any>('assets/us-states.geojson');
   }
-
+  
   getPopulationByState(name: string): Observable<number | null> {
-    return this.http.get<any[]>('./../us-states-population.json').pipe(
+    return this.http.get<any[]>('assets/us-states-population.json').pipe(
       map((data) => {
         const stateData = data.find(state => state.name.toLowerCase() === name.toLowerCase());
         return stateData ? +stateData.population.replace(/,/g, '') : null;
       })
     );
-  }
+  }  
 
   getCovidData(state: string): Observable<CovidData> {
     return this.http.get<any>(`https://api.covidtracking.com/v1/states/${state.toLocaleLowerCase()}/current.json`);
