@@ -1,0 +1,29 @@
+# Node modules and build outputs
+**/node_modules/
+**/dist/
+**/build/
+
+# Dependency & lock files (optional to rebuild inside the container)
+npm-debug.log
+package-lock.json
+yarn.lock
+
+# Git and version control
+.git
+.gitignore
+
+# Environment / secret files
+.env
+.env.local*
+.env.*.local
+
+# Logs, coverage, caches
+*.log
+coverage/
+*.coverage
+.cache
+
+# OS or IDE artifacts
+.DS_Store
+.idea/
+.vscode/
